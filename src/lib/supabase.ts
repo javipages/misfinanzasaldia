@@ -41,11 +41,12 @@ export type Database = {
         }
         Relationships: []
       }
-      expense_values: {
+      expense_entries: {
         Row: {
           amount: number
           category_id: string
           created_at: string
+          description: string | null
           id: string
           month: number
           updated_at: string
@@ -53,9 +54,10 @@ export type Database = {
           year: number
         }
         Insert: {
-          amount?: number
+          amount: number
           category_id: string
           created_at?: string
+          description?: string | null
           id?: string
           month: number
           updated_at?: string
@@ -66,6 +68,7 @@ export type Database = {
           amount?: number
           category_id?: string
           created_at?: string
+          description?: string | null
           id?: string
           month?: number
           updated_at?: string
@@ -74,7 +77,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "expense_values_category_id_fkey"
+            foreignKeyName: "expense_entries_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "expense_categories"
@@ -109,11 +112,12 @@ export type Database = {
         }
         Relationships: []
       }
-      income_values: {
+      income_entries: {
         Row: {
           amount: number
           category_id: string
           created_at: string
+          description: string | null
           id: string
           month: number
           updated_at: string
@@ -121,9 +125,10 @@ export type Database = {
           year: number
         }
         Insert: {
-          amount?: number
+          amount: number
           category_id: string
           created_at?: string
+          description?: string | null
           id?: string
           month: number
           updated_at?: string
@@ -134,6 +139,7 @@ export type Database = {
           amount?: number
           category_id?: string
           created_at?: string
+          description?: string | null
           id?: string
           month?: number
           updated_at?: string
@@ -142,13 +148,34 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "income_values_category_id_fkey"
+            foreignKeyName: "income_entries_category_id_fkey"
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "income_categories"
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_preferences: {
+        Row: {
+          created_at: string
+          selected_year: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          selected_year?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          selected_year?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

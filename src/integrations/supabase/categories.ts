@@ -2,8 +2,6 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   TABLE_INCOME_CATEGORIES,
   TABLE_EXPENSE_CATEGORIES,
-  TABLE_INCOME_VALUES,
-  TABLE_EXPENSE_VALUES,
 } from "@/config/api";
 
 export type CategoryInput = {
@@ -106,81 +104,102 @@ export async function deleteExpenseCategory(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export type ValueRow = {
+// Entry-based API
+export type EntryRow = {
   id: string;
   user_id: string;
   category_id: string;
   year: number;
-  month: number; // 1-12
+  month: number;
   amount: number;
+  description: string | null;
   created_at: string;
   updated_at: string;
 };
 
-export async function listIncomeValues(year: number): Promise<ValueRow[]> {
+export async function listIncomeEntries(year: number): Promise<EntryRow[]> {
   const { data, error } = await supabase
-    .from(TABLE_INCOME_VALUES)
+    .from("income_entries")
     .select("*")
     .eq("year", year);
   if (error) throw error;
-  return data ?? [];
+  return (data as EntryRow[]) ?? [];
 }
 
-export async function listExpenseValues(year: number): Promise<ValueRow[]> {
+export async function listExpenseEntries(year: number): Promise<EntryRow[]> {
   const { data, error } = await supabase
-    .from(TABLE_EXPENSE_VALUES)
+    .from("expense_entries")
     .select("*")
     .eq("year", year);
   if (error) throw error;
-  return data ?? [];
+  return (data as EntryRow[]) ?? [];
 }
 
-export async function upsertIncomeValue(
-  categoryId: string,
-  year: number,
-  month: number,
-  amount: number
-): Promise<ValueRow> {
+export async function createIncomeEntry(
+  entry: Omit<EntryRow, "id" | "user_id" | "created_at" | "updated_at">
+): Promise<EntryRow> {
   const { data, error } = await supabase
-    .from(TABLE_INCOME_VALUES)
-    .upsert(
-      [
-        {
-          category_id: categoryId,
-          year,
-          month,
-          amount,
-        },
-      ],
-      { onConflict: "user_id,category_id,year,month" }
-    )
+    .from("income_entries")
+    .insert([entry])
     .select()
     .single();
   if (error) throw error;
-  return data!;
+  return data as EntryRow;
 }
 
-export async function upsertExpenseValue(
-  categoryId: string,
-  year: number,
-  month: number,
-  amount: number
-): Promise<ValueRow> {
+export async function createExpenseEntry(
+  entry: Omit<EntryRow, "id" | "user_id" | "created_at" | "updated_at">
+): Promise<EntryRow> {
   const { data, error } = await supabase
-    .from(TABLE_EXPENSE_VALUES)
-    .upsert(
-      [
-        {
-          category_id: categoryId,
-          year,
-          month,
-          amount,
-        },
-      ],
-      { onConflict: "user_id,category_id,year,month" }
-    )
+    .from("expense_entries")
+    .insert([entry])
     .select()
     .single();
   if (error) throw error;
-  return data!;
+  return data as EntryRow;
+}
+
+export async function updateIncomeEntry(
+  id: string,
+  patch: Partial<
+    Pick<EntryRow, "amount" | "description" | "month" | "category_id" | "year">
+  >
+): Promise<EntryRow> {
+  const { data, error } = await supabase
+    .from("income_entries")
+    .update(patch)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as EntryRow;
+}
+
+export async function updateExpenseEntry(
+  id: string,
+  patch: Partial<
+    Pick<EntryRow, "amount" | "description" | "month" | "category_id" | "year">
+  >
+): Promise<EntryRow> {
+  const { data, error } = await supabase
+    .from("expense_entries")
+    .update(patch)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as EntryRow;
+}
+
+export async function deleteIncomeEntry(id: string): Promise<void> {
+  const { error } = await supabase.from("income_entries").delete().eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteExpenseEntry(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("expense_entries")
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
 }
