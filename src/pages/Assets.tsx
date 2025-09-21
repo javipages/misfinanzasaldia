@@ -37,7 +37,7 @@ const Assets = () => {
     "Nov",
     "Dic",
   ];
-  const { assets, swapOrder } = useAssets();
+  const { assets, swapOrder, updateAssetValue } = useAssets();
 
   type AssetRow = AssetItem & {
     icon: typeof Wallet;
@@ -155,14 +155,28 @@ const Assets = () => {
       .filter((cat) => cat.type === type)
       .reduce((sum, cat) => sum + (cat.data[lastMonthIndex] ?? 0), 0);
 
-  const handleCellEdit = (
+  const handleCellEdit = async (
     categoryId: string,
     monthIndex: number,
     value: string
   ) => {
-    console.log(
-      `Update asset category ${categoryId}, month ${monthIndex}, value: ${value}`
-    );
+    const numericValue = parseFloat(value) || 0;
+    const month = monthIndex + 1; // Convert to 1-based month
+
+    try {
+      await updateAssetValue.mutateAsync({
+        categoryId,
+        month,
+        amount: numericValue,
+      });
+      console.log(
+        `Successfully updated asset category ${categoryId}, month ${month}, value: ${numericValue}`
+      );
+    } catch (error) {
+      console.error("Error updating asset value:", error);
+      // TODO: Show error message to user
+    }
+
     setEditingCell(null);
   };
 

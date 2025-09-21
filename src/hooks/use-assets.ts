@@ -7,6 +7,8 @@ import {
   deleteAssetCategory,
   type AssetCategoryInput,
   listAssetValues,
+  upsertAssetValue,
+  type AssetValueRow,
 } from "@/integrations/supabase/categories";
 import { useYearStore } from "@/store/year";
 
@@ -191,6 +193,45 @@ export function useAssets() {
     },
   });
 
+  const updateAssetValue = useMutation({
+    mutationFn: async ({
+      categoryId,
+      month,
+      amount,
+    }: {
+      categoryId: string;
+      month: number;
+      amount: number;
+    }) => {
+      return upsertAssetValue(categoryId, year, month, amount);
+    },
+    onMutate: async ({ categoryId, month, amount }) => {
+      // Cancel any outgoing refetches
+      await qc.cancelQueries({ queryKey: ["asset_values", year] });
+
+      // Snapshot the previous value
+      const prev = qc.getQueryData<AssetValueRow[]>(["asset_values", year]);
+
+      // Optimistically update to the new value
+      if (prev) {
+        const next = prev.map((v) =>
+          v.category_id === categoryId && v.month === month
+            ? { ...v, amount }
+            : v
+        );
+        qc.setQueryData(["asset_values", year], next);
+      }
+
+      return { prev } as const;
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["asset_values", year], ctx.prev);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["asset_values", year] });
+    },
+  });
+
   return {
     assets,
     isLoading: assetsQuery.isLoading,
@@ -200,5 +241,6 @@ export function useAssets() {
     changeAssetType,
     deleteAsset,
     swapOrder,
+    updateAssetValue,
   } as const;
 }

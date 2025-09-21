@@ -280,3 +280,57 @@ export async function listAssetValues(year: number): Promise<AssetValueRow[]> {
   if (error) throw error;
   return (data as AssetValueRow[]) ?? [];
 }
+
+export async function createAssetValue(
+  input: Omit<AssetValueRow, "id" | "user_id" | "created_at" | "updated_at">
+): Promise<AssetValueRow> {
+  const { data, error } = await supabase
+    .from(TABLE_ASSET_VALUES)
+    .insert([input])
+    .select()
+    .single();
+  if (error) throw error;
+  return data as AssetValueRow;
+}
+
+export async function updateAssetValue(
+  id: string,
+  patch: Partial<
+    Pick<AssetValueRow, "amount" | "month" | "year" | "category_id">
+  >
+): Promise<AssetValueRow> {
+  const { data, error } = await supabase
+    .from(TABLE_ASSET_VALUES)
+    .update(patch)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as AssetValueRow;
+}
+
+export async function upsertAssetValue(
+  categoryId: string,
+  year: number,
+  month: number,
+  amount: number
+): Promise<AssetValueRow> {
+  const { data, error } = await supabase
+    .from(TABLE_ASSET_VALUES)
+    .upsert(
+      {
+        category_id: categoryId,
+        year,
+        month,
+        amount,
+      },
+      {
+        onConflict: "user_id,category_id,year,month",
+        ignoreDuplicates: false,
+      }
+    )
+    .select()
+    .single();
+  if (error) throw error;
+  return data as AssetValueRow;
+}
