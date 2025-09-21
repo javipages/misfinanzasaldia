@@ -10,6 +10,7 @@ if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
 export const TABLE_INCOME_CATEGORIES = "income_categories";
 export const TABLE_EXPENSE_CATEGORIES = "expense_categories";
 export const TABLE_ASSET_CATEGORIES = "asset_categories";
+export const TABLE_ASSET_VALUES = "asset_values";
 export const TABLE_INCOME_VALUES = "income_values";
 export const TABLE_EXPENSE_VALUES = "expense_values";
 export const TABLE_USER_PREFERENCES = "user_preferences";

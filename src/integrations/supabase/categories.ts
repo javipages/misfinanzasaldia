@@ -3,6 +3,7 @@ import {
   TABLE_INCOME_CATEGORIES,
   TABLE_EXPENSE_CATEGORIES,
   TABLE_ASSET_CATEGORIES,
+  TABLE_ASSET_VALUES,
 } from "@/config/api";
 
 export type CategoryInput = {
@@ -257,4 +258,25 @@ export async function deleteExpenseEntry(id: string): Promise<void> {
     .delete()
     .eq("id", id);
   if (error) throw error;
+}
+
+// Asset values API
+export type AssetValueRow = {
+  id: string;
+  user_id: string;
+  category_id: string;
+  year: number;
+  month: number;
+  amount: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function listAssetValues(year: number): Promise<AssetValueRow[]> {
+  const { data, error } = await supabase
+    .from(TABLE_ASSET_VALUES)
+    .select("*")
+    .eq("year", year);
+  if (error) throw error;
+  return (data as AssetValueRow[]) ?? [];
 }

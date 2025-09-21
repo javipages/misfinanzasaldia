@@ -63,7 +63,7 @@ const Assets = () => {
             : c.type === "inversion"
             ? TrendingUp
             : DollarSign,
-        data: new Array(12).fill(0),
+        data: c.monthly ?? new Array(12).fill(0),
       })),
     [assets]
   );
@@ -139,10 +139,7 @@ const Assets = () => {
     }
   };
 
-  const calculateRowTotal = (data: number[]) => {
-    return data.reduce((sum, value) => sum + value, 0);
-  };
-
+  // Totals row (per month) is shown at the bottom; global total not displayed
   const calculateColumnTotal = (monthIndex: number) => {
     return assetCategories.reduce(
       (sum, category) => sum + category.data[monthIndex],
@@ -150,11 +147,22 @@ const Assets = () => {
     );
   };
 
-  const calculateTotalByType = (type: string) => {
-    return assetCategories
+  // Cards should reflect the latest month with data. Compute last month index.
+  const lastMonthIndex = useMemo(() => {
+    for (let i = 11; i >= 0; i--) {
+      const monthSum = assetCategories.reduce(
+        (s, c) => s + (c.data[i] ?? 0),
+        0
+      );
+      if (monthSum !== 0) return i;
+    }
+    return new Date().getMonth();
+  }, [assetCategories]);
+
+  const totalByTypeLastMonth = (type: string) =>
+    assetCategories
       .filter((cat) => cat.type === type)
-      .reduce((sum, cat) => sum + calculateRowTotal(cat.data), 0);
-  };
+      .reduce((sum, cat) => sum + (cat.data[lastMonthIndex] ?? 0), 0);
 
   const handleCellEdit = (
     categoryId: string,
@@ -206,9 +214,6 @@ const Assets = () => {
                       {month}
                     </th>
                   ))}
-                  <th className="text-center p-3 font-semibold text-primary min-w-[100px]">
-                    Total
-                  </th>
                   <th className="text-center p-3 min-w-[100px]">Acciones</th>
                 </tr>
               </thead>
@@ -276,9 +281,6 @@ const Assets = () => {
                           </td>
                         );
                       })}
-                      <td className="p-3 text-center font-bold text-primary">
-                        €{calculateRowTotal(category.data).toLocaleString()}
-                      </td>
                       <td className="p-3 text-center">
                         <div className="flex justify-center gap-1">
                           <Button variant="ghost" size="sm">
@@ -299,7 +301,7 @@ const Assets = () => {
 
                 <tr className="border-t-2 border-primary/20 bg-muted/20">
                   <td className="p-3 font-bold text-primary" colSpan={3}>
-                    PATRIMONIO TOTAL
+                    TOTAL
                   </td>
                   {months.map((_, monthIndex) => (
                     <td
@@ -309,16 +311,7 @@ const Assets = () => {
                       €{calculateColumnTotal(monthIndex).toLocaleString()}
                     </td>
                   ))}
-                  <td className="p-3 text-center font-bold text-primary text-lg">
-                    €
-                    {assetCategories
-                      .reduce(
-                        (sum, cat) => sum + calculateRowTotal(cat.data),
-                        0
-                      )
-                      .toLocaleString()}
-                  </td>
-                  <td className="p-3"></td>
+                  {/* No global total cell */}
                 </tr>
               </tbody>
             </table>
@@ -329,7 +322,7 @@ const Assets = () => {
         <Card className="shadow-card">
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-info">
-              €{calculateTotalByType("cuenta_bancaria").toLocaleString()}
+              €{totalByTypeLastMonth("cuenta_bancaria").toLocaleString()}
             </div>
             <div className="text-sm text-muted-foreground">
               Cuentas bancarias
@@ -339,7 +332,7 @@ const Assets = () => {
         <Card className="shadow-card">
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-success">
-              €{calculateTotalByType("inversion").toLocaleString()}
+              €{totalByTypeLastMonth("inversion").toLocaleString()}
             </div>
             <div className="text-sm text-muted-foreground">Inversiones</div>
           </CardContent>
@@ -347,14 +340,19 @@ const Assets = () => {
         <Card className="shadow-card">
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-muted-foreground">
-              €{calculateTotalByType("efectivo").toLocaleString()}
+              €{totalByTypeLastMonth("efectivo").toLocaleString()}
             </div>
             <div className="text-sm text-muted-foreground">Efectivo</div>
           </CardContent>
         </Card>
         <Card className="shadow-card">
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-primary">€69,100</div>
+            <div className="text-2xl font-bold text-primary">
+              €
+              {assetCategories
+                .reduce((sum, cat) => sum + (cat.data[lastMonthIndex] ?? 0), 0)
+                .toLocaleString()}
+            </div>
             <div className="text-sm text-muted-foreground">
               Patrimonio total
             </div>

@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   listAssetCategories,
   updateAssetCategory,
   createAssetCategory,
   deleteAssetCategory,
-  type AssetCategoryRow,
   type AssetCategoryInput,
+  listAssetValues,
 } from "@/integrations/supabase/categories";
+import { useYearStore } from "@/store/year";
 
 export type AssetType = AssetCategoryInput["type"];
 
@@ -16,10 +17,12 @@ export type AssetItem = {
   name: string;
   type: AssetType;
   display_order: number;
+  monthly?: number[]; // length 12, 1-indexed months placed at idx-1
 };
 
 export function useAssets() {
   const qc = useQueryClient();
+  const year = useYearStore((s) => s.year);
 
   const assetsQuery = useQuery({
     queryKey: ["categories", "assets"],
@@ -34,12 +37,26 @@ export function useAssets() {
     },
   });
 
+  const valuesQuery = useQuery({
+    queryKey: ["asset_values", year],
+    queryFn: async () => listAssetValues(year),
+  });
+
   const assets = useMemo(
     () =>
       (assetsQuery.data ?? [])
         .slice()
+        .map((a) => {
+          const months = new Array(12).fill(0);
+          for (const v of valuesQuery.data ?? []) {
+            if (v.category_id === a.id && v.month >= 1 && v.month <= 12) {
+              months[v.month - 1] = v.amount;
+            }
+          }
+          return { ...a, monthly: months };
+        })
         .sort((a, b) => a.display_order - b.display_order),
-    [assetsQuery.data]
+    [assetsQuery.data, valuesQuery.data]
   );
 
   function nextOrder(arr: AssetItem[]) {
@@ -174,7 +191,7 @@ export function useAssets() {
   return {
     assets,
     isLoading: assetsQuery.isLoading,
-    isFetching: assetsQuery.isFetching,
+    isFetching: assetsQuery.isFetching || valuesQuery.isFetching,
     addAsset,
     renameAsset,
     changeAssetType,
