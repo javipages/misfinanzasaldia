@@ -62,7 +62,7 @@ export function MetricCard({
     <Card
       className={`${getVariantStyles()} shadow-card hover:shadow-elevated transition-all duration-200 ${className}`}
     >
-      <CardContent className="p-6">
+      <CardContent className="px-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-sm font-medium text-muted-foreground">{title}</p>

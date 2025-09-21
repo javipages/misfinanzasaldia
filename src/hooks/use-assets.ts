@@ -39,7 +39,10 @@ export function useAssets() {
 
   const valuesQuery = useQuery({
     queryKey: ["asset_values", year],
-    queryFn: async () => listAssetValues(year),
+    queryFn: async () => {
+      const data = await listAssetValues(year);
+      return data;
+    },
   });
 
   const assets = useMemo(

@@ -9,6 +9,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { Layout } from "@/components/Layout";
 import Auth from "@/pages/Auth";
 import Index from "@/pages/Index";
+import Movements from "@/pages/Movements";
 import Income from "@/pages/Income";
 import Expenses from "@/pages/Expenses";
 import Assets from "@/pages/Assets";
@@ -29,6 +30,7 @@ function App() {
           <Route path="/" element={<ProtectedRoute />}>
             <Route element={<Layout />}>
               <Route index element={<Index />} />
+              <Route path="/movements" element={<Movements />} />
               <Route path="/income" element={<Income />} />
               <Route path="/expenses" element={<Expenses />} />
               <Route path="/assets" element={<Assets />} />

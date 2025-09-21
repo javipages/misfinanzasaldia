@@ -2,92 +2,239 @@ import { useState } from "react";
 import { MetricCard } from "@/components/MetricCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Wallet, 
-  Target,
-  Plus,
-  Calendar
-} from "lucide-react";
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  LineChart, 
-  Line 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TrendingUp, TrendingDown, Wallet, Target, Filter } from "lucide-react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  LineChart,
+  Line,
+  ComposedChart,
 } from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartConfig,
+} from "@/components/ui/chart";
+import {
+  useDashboardData,
+  useDashboardMetrics,
+} from "@/hooks/use-dashboard-data";
+import { useYearStore } from "@/store/year";
 
 const Dashboard = () => {
-  const [selectedYear, setSelectedYear] = useState("2024");
+  const [selectedMonth, setSelectedMonth] = useState<number | undefined>(
+    undefined
+  );
+  const [showPreviousYear, setShowPreviousYear] = useState(false);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const year = useYearStore((s) => s.year);
 
-  // Mock data
-  const years = ["2024", "2023", "2022"];
-  
-  const monthlyData = [
-    { month: "Ene", ingresos: 3500, gastos: 2800, ahorro: 700 },
-    { month: "Feb", ingresos: 3500, gastos: 2900, ahorro: 600 },
-    { month: "Mar", ingresos: 3700, gastos: 3100, ahorro: 600 },
-    { month: "Abr", ingresos: 3500, gastos: 2750, ahorro: 750 },
-    { month: "May", ingresos: 3500, gastos: 2850, ahorro: 650 },
-    { month: "Jun", ingresos: 3800, gastos: 3000, ahorro: 800 },
+  const data = useDashboardData(selectedMonth);
+  const metrics = useDashboardMetrics(selectedMonth);
+
+  const months = [
+    { value: undefined, label: "Todo el año" },
+    { value: 1, label: "Enero" },
+    { value: 2, label: "Febrero" },
+    { value: 3, label: "Marzo" },
+    { value: 4, label: "Abril" },
+    { value: 5, label: "Mayo" },
+    { value: 6, label: "Junio" },
+    { value: 7, label: "Julio" },
+    { value: 8, label: "Agosto" },
+    { value: 9, label: "Septiembre" },
+    { value: 10, label: "Octubre" },
+    { value: 11, label: "Noviembre" },
+    { value: 12, label: "Diciembre" },
   ];
 
-  const expenseCategories = [
-    { name: "Vivienda", value: 1200, color: "hsl(var(--chart-1))" },
-    { name: "Comida", value: 600, color: "hsl(var(--chart-2))" },
-    { name: "Transporte", value: 400, color: "hsl(var(--chart-3))" },
-    { name: "Ocio", value: 300, color: "hsl(var(--chart-4))" },
-    { name: "Otros", value: 350, color: "hsl(var(--chart-5))" },
-  ];
+  // Chart configurations
+  const chartConfig = {
+    ingresos: {
+      label: "Ingresos",
+      color: "#22c55e", // Verde para ingresos positivos
+    },
+    gastos: {
+      label: "Gastos",
+      color: "#ef4444", // Rojo para gastos negativos
+    },
+    prevIngresos: {
+      label: "Ingresos Año Anterior",
+      color: "#16a34a", // Verde oscuro para comparación
+    },
+    prevGastos: {
+      label: "Gastos Año Anterior",
+      color: "#dc2626", // Rojo oscuro para comparación
+    },
+    patrimonio: {
+      label: "Patrimonio",
+      color: "#3b82f6", // Azul para patrimonio
+    },
+  } satisfies ChartConfig;
 
-  const patrimonyData = [
-    { month: "Ene", patrimonio: 15000 },
-    { month: "Feb", patrimonio: 15600 },
-    { month: "Mar", patrimonio: 16200 },
-    { month: "Abr", patrimonio: 16950 },
-    { month: "May", patrimonio: 17600 },
-    { month: "Jun", patrimonio: 18400 },
-  ];
+  const formatChange = (change: number) => {
+    const isPositive = change > 0;
+    const isNegative = change < 0;
+    const absChange = Math.abs(change);
 
-  const totalIngresos = monthlyData.reduce((sum, item) => sum + item.ingresos, 0);
-  const totalGastos = monthlyData.reduce((sum, item) => sum + item.gastos, 0);
-  const totalAhorro = totalIngresos - totalGastos;
-  const currentPatrimony = patrimonyData[patrimonyData.length - 1]?.patrimonio || 0;
+    if (change === 0) return "Sin cambios";
+
+    return `${isPositive ? "+" : isNegative ? "" : ""}${absChange.toFixed(1)}%`;
+  };
+
+  if (data.isLoading) {
+    return (
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <div className="flex items-center justify-between">
+          <div>
+            <Skeleton className="h-8 w-48 mb-2" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+        </div>
+
+        {/* Metrics cards skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="shadow-card">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-8 w-32" />
+                    <Skeleton className="h-3 w-28" />
+                  </div>
+                  <Skeleton className="h-12 w-12 rounded-lg" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Charts skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Monthly Overview skeleton */}
+          <Card className="shadow-card">
+            <CardHeader>
+              <Skeleton className="h-6 w-40" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px] w-full" />
+            </CardContent>
+          </Card>
+
+          {/* Expense Distribution skeleton */}
+          <Card className="shadow-card">
+            <CardHeader>
+              <Skeleton className="h-6 w-36" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px] w-full rounded-full" />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bottom section skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="shadow-card">
+            <CardHeader>
+              <Skeleton className="h-6 w-48" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-[300px] w-full" />
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card">
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex justify-between items-center">
+                  <Skeleton className="h-4 w-28" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header with year selector */}
+      {/* Header with filters */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard Financiero</h1>
-          <p className="text-muted-foreground">Resumen de tu situación financiera</p>
+          <h1 className="text-3xl font-bold text-foreground">
+            Dashboard Financiero
+          </h1>
+          <p className="text-muted-foreground">
+            Resumen de tu situación financiera {year}
+            {selectedMonth && (
+              <Badge variant="secondary" className="ml-2">
+                {months.find((m) => m.value === selectedMonth)?.label}
+              </Badge>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-3">
-          <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="w-32">
-              <Calendar className="h-4 w-4 mr-2" />
+          <Select
+            value={selectedMonth?.toString() || "undefined"}
+            onValueChange={(value) =>
+              setSelectedMonth(
+                value === "undefined" ? undefined : Number(value)
+              )
+            }
+          >
+            <SelectTrigger className="w-40">
+              <Filter className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {years.map((year) => (
-                <SelectItem key={year} value={year}>
-                  {year}
+              {months.map((month) => (
+                <SelectItem
+                  key={month.value || "all"}
+                  value={month.value?.toString() || "undefined"}
+                >
+                  {month.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Año
+
+          <Button
+            variant={showPreviousYear ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowPreviousYear(!showPreviousYear)}
+          >
+            <TrendingUp className="h-4 w-4 mr-2" />
+            {showPreviousYear ? "Ocultar" : "Comparar"} Año Anterior
           </Button>
         </div>
       </div>
@@ -96,60 +243,109 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Total Ingresos"
-          value={`€${totalIngresos.toLocaleString()}`}
-          change="+5.2% vs mes anterior"
+          value={`€${metrics.totalIngresos.toLocaleString()}`}
+          change={`${formatChange(metrics.ingresosChange)} vs mes anterior`}
           icon={TrendingUp}
-          variant="success"
+          variant={metrics.ingresosChange >= 0 ? "success" : "warning"}
         />
         <MetricCard
           title="Total Gastos"
-          value={`€${totalGastos.toLocaleString()}`}
-          change="-2.1% vs mes anterior"
+          value={`€${metrics.totalGastos.toLocaleString()}`}
+          change={`${formatChange(metrics.gastosChange)} vs mes anterior`}
           icon={TrendingDown}
-          variant="warning"
+          variant={metrics.gastosChange <= 0 ? "success" : "warning"}
         />
         <MetricCard
           title="Ahorro Neto"
-          value={`€${totalAhorro.toLocaleString()}`}
-          change="+€150 vs mes anterior"
+          value={`€${metrics.totalAhorro.toLocaleString()}`}
+          change={`${formatChange(metrics.ahorroChange)} vs mes anterior`}
           icon={Target}
-          variant="success"
+          variant={metrics.ahorroChange >= 0 ? "success" : "warning"}
         />
         <MetricCard
           title="Patrimonio Total"
-          value={`€${currentPatrimony.toLocaleString()}`}
-          change="+4.6% vs mes anterior"
+          value={`€${metrics.currentPatrimony.toLocaleString()}`}
+          change={`${formatChange(metrics.patrimonioChange)} vs mes anterior`}
           icon={Wallet}
-          variant="default"
+          variant={metrics.patrimonioChange >= 0 ? "success" : "warning"}
         />
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Monthly Overview with Comparison */}
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle>Resumen Mensual {selectedYear}</CardTitle>
+            <CardTitle>
+              {selectedMonth
+                ? `Resumen de ${
+                    months.find((m) => m.value === selectedMonth)?.label
+                  }`
+                : `Resumen Mensual ${year}`}
+            </CardTitle>
+            {!selectedMonth && showPreviousYear && (
+              <p className="text-sm text-muted-foreground">
+                Comparación con {year - 1}
+              </p>
+            )}
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={monthlyData}>
+            <ChartContainer config={chartConfig}>
+              <ComposedChart data={data.monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                 <XAxis dataKey="month" />
                 <YAxis />
-                <Tooltip 
-                  formatter={(value) => [`€${value}`, '']}
-                  labelStyle={{ color: 'hsl(var(--foreground))' }}
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }}
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value, name) => {
+                        const label =
+                          name === "ingresos"
+                            ? "Ingresos"
+                            : name === "gastos"
+                            ? "Gastos"
+                            : name === "ahorro"
+                            ? "Ahorro"
+                            : name;
+                        return `${label}: €${Number(value).toLocaleString()}`;
+                      }}
+                    />
+                  }
                 />
-                <Bar dataKey="ingresos" fill="hsl(var(--chart-2))" name="Ingresos" />
-                <Bar dataKey="gastos" fill="hsl(var(--chart-6))" name="Gastos" />
-              </BarChart>
-            </ResponsiveContainer>
+                <Bar
+                  dataKey="ingresos"
+                  fill="var(--color-ingresos)"
+                  name="Ingresos"
+                />
+                <Bar
+                  dataKey="gastos"
+                  fill="var(--color-gastos)"
+                  name="Gastos"
+                />
+                {!selectedMonth && showPreviousYear && (
+                  <>
+                    <Line
+                      type="monotone"
+                      dataKey="prevIngresos"
+                      stroke="var(--color-prevIngresos)"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      name="Ingresos Año Anterior"
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="prevGastos"
+                      stroke="var(--color-prevGastos)"
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      name="Gastos Año Anterior"
+                      dot={false}
+                    />
+                  </>
+                )}
+              </ComposedChart>
+            </ChartContainer>
           </CardContent>
         </Card>
 
@@ -157,12 +353,19 @@ const Dashboard = () => {
         <Card className="shadow-card">
           <CardHeader>
             <CardTitle>Distribución de Gastos</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {selectedMonth
+                ? `Mes de ${
+                    months.find((m) => m.value === selectedMonth)?.label
+                  }`
+                : `Total del año ${year}`}
+            </p>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={expenseCategories}
+                  data={data.expenseCategories}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -170,65 +373,195 @@ const Dashboard = () => {
                   paddingAngle={5}
                   dataKey="value"
                 >
-                  {expenseCategories.map((entry, index) => (
+                  {data.expenseCategories.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  formatter={(value) => [`€${value}`, 'Gasto']}
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
+                <Tooltip
+                  formatter={(value) =>
+                    `Gasto: €${Number(value).toLocaleString()}`
+                  }
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--popover))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                    boxShadow:
+                      "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+                    color: "hsl(var(--foreground))",
+                    fontSize: "14px",
+                    padding: "8px 12px",
+                    zIndex: 1000,
                   }}
                 />
               </PieChart>
             </ResponsiveContainer>
-            <div className="grid grid-cols-2 gap-2 mt-4">
-              {expenseCategories.map((category, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full" 
-                    style={{ backgroundColor: category.color }}
-                  />
-                  <span className="text-sm text-muted-foreground">{category.name}</span>
+            <div className="grid grid-cols-1 gap-2 mt-4">
+              {(showAllCategories
+                ? data.expenseCategories
+                : data.expenseCategories.slice(0, 5)
+              ).map((category, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: category.color }}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {category.name}
+                    </span>
+                  </div>
+                  <span className="text-sm font-medium">
+                    €{category.value.toLocaleString()}
+                  </span>
                 </div>
               ))}
+              {data.expenseCategories.length > 5 && (
+                <div className="text-center pt-2 border-t">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAllCategories(!showAllCategories)}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    {showAllCategories
+                      ? `Ocultar ${
+                          data.expenseCategories.length - 5
+                        } categorías`
+                      : `Ver +${
+                          data.expenseCategories.length - 5
+                        } categorías más`}
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Patrimony Evolution */}
-        <Card className="shadow-card lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Evolución del Patrimonio</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={patrimonyData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip 
-                  formatter={(value) => [`€${value}`, 'Patrimonio']}
-                  labelStyle={{ color: 'hsl(var(--foreground))' }}
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--card))', 
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="patrimonio" 
-                  stroke="hsl(var(--chart-1))" 
-                  strokeWidth={3}
-                  dot={{ fill: 'hsl(var(--chart-1))', strokeWidth: 2, r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {/* Patrimony Evolution and Financial Summary */}
+
+        {/* Year Comparison */}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle>Evolución del Patrimonio</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {selectedMonth
+                  ? `Hasta ${
+                      months.find((m) => m.value === selectedMonth)?.label
+                    }`
+                  : `Evolución mensual ${year}`}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer
+                config={{
+                  patrimonio: {
+                    label: "Patrimonio",
+                    color: "hsl(var(--chart-1))",
+                  },
+                }}
+              >
+                <LineChart data={data.monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <ChartTooltip
+                    content={
+                      <ChartTooltipContent
+                        formatter={(value) =>
+                          `Patrimonio: €${Number(value).toLocaleString()}`
+                        }
+                      />
+                    }
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="patrimonio"
+                    stroke="var(--color-patrimonio)"
+                    strokeWidth={3}
+                    dot={{
+                      fill: "var(--color-patrimonio)",
+                      strokeWidth: 2,
+                      r: 4,
+                    }}
+                    name="Patrimonio"
+                  />
+                </LineChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </div>
+        <div>
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle>Resumen Financiero</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">
+                    Tasa de Ahorro
+                  </span>
+                  <span className="font-medium">
+                    {metrics.totalIngresos > 0
+                      ? (
+                          (metrics.totalAhorro / metrics.totalIngresos) *
+                          100
+                        ).toFixed(1)
+                      : 0}
+                    %
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">
+                    Gastos/Ingresos
+                  </span>
+                  <span className="font-medium">
+                    {metrics.totalIngresos > 0
+                      ? (
+                          (metrics.totalGastos / metrics.totalIngresos) *
+                          100
+                        ).toFixed(1)
+                      : 0}
+                    %
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">
+                    Mes con más ahorro
+                  </span>
+                  <span className="font-medium">
+                    {data.monthlyData.reduce((max, current, index) => {
+                      const maxAhorro = data.monthlyData[max]?.ahorro || 0;
+                      const currentAhorro = current.ahorro;
+                      return currentAhorro > maxAhorro ? index : max;
+                    }, 0) !== -1
+                      ? data.monthlyData.reduce((max, current, index) => {
+                          const maxAhorro = data.monthlyData[max]?.ahorro || 0;
+                          const currentAhorro = current.ahorro;
+                          return currentAhorro > maxAhorro ? index : max;
+                        }, 0) + 1
+                      : "N/A"}
+                    º mes
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">
+                    Promedio mensual
+                  </span>
+                  <span className="font-medium">
+                    €
+                    {(
+                      metrics.totalIngresos / (selectedMonth ? 1 : 12)
+                    ).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

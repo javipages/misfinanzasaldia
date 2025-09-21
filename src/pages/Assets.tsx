@@ -2,17 +2,8 @@ import { useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Plus,
-  Edit,
-  Trash2,
-  Wallet,
-  TrendingUp,
-  DollarSign,
-  GripVertical,
-} from "lucide-react";
+import { Wallet, TrendingUp, DollarSign, GripVertical } from "lucide-react";
 import { useAssets, type AssetItem } from "@/hooks/use-assets";
 import {
   DndContext,
@@ -184,10 +175,6 @@ const Assets = () => {
             Gestiona el balance de tus activos financieros
           </p>
         </div>
-        <Button className="bg-primary hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Activo
-        </Button>
       </div>
 
       <div className="overflow-x-auto">
@@ -214,7 +201,6 @@ const Assets = () => {
                       {month}
                     </th>
                   ))}
-                  <th className="text-center p-3 min-w-[100px]">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -281,20 +267,6 @@ const Assets = () => {
                           </td>
                         );
                       })}
-                      <td className="p-3 text-center">
-                        <div className="flex justify-center gap-1">
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
                     </SortableRow>
                   );
                 })}
