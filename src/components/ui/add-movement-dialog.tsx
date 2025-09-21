@@ -24,6 +24,7 @@ type Props = {
   defaultMonth?: number | null;
   defaultAmount?: number | null;
   defaultDescription?: string | null;
+  isEditing?: boolean;
   onSubmit: (params: {
     type: MovementType;
     categoryId: string;
@@ -57,6 +58,7 @@ export function AddMovementDialog({
   defaultMonth = null,
   defaultAmount = null,
   defaultDescription = null,
+  isEditing = false,
   onSubmit,
   onClose,
 }: Props) {
@@ -96,7 +98,7 @@ export function AddMovementDialog({
   const availableCategories =
     type === "income" ? categories?.income ?? [] : categories?.expense ?? [];
 
-  const title = "Añadir movimiento";
+  const title = isEditing ? "Editar movimiento" : "Añadir movimiento";
   const buttonText = type === "income" ? "Ingreso" : "Gasto";
 
   return (
@@ -226,12 +228,10 @@ export function AddMovementDialog({
             disabled={saving || !categoryId || !amount}
             variant={type === "income" ? "default" : "destructive"}
           >
-            Guardar {buttonText}
+            {isEditing ? "Actualizar" : "Guardar"} {buttonText}
           </Button>
         </div>
       </div>
     </div>
   );
 }
-
-

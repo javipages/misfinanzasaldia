@@ -1,6 +1,16 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, ArrowUpDown, Edit, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Search,
+  ArrowUpDown,
+  Edit,
+  Trash2,
+  CheckCircle,
+  Loader2,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -38,9 +48,10 @@ import {
   type MovementRow,
   type MovementType,
 } from "@/hooks/use-movements";
-
-type SortField = "date" | "amount" | "category" | "type" | "description";
-type SortDirection = "asc" | "desc";
+import {
+  useMovementsFilter,
+  type SortField,
+} from "@/hooks/use-movements-filter";
 
 const MONTHS = [
   "Enero",
@@ -59,161 +70,56 @@ const MONTHS = [
 
 const Movements = () => {
   const year = useYearStore((s) => s.year);
-  const { movements, categories, isLoading, deleteMovement, createMovement } =
-    useMovements(year);
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [typeFilter, setTypeFilter] = useState<MovementType | "all">("all");
-  const [monthFilter, setMonthFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [sortField, setSortField] = useState<SortField>("date");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-
-  // Filtrar movimientos
-  const filteredMovements = useMemo(() => {
-    let filtered = movements;
-
-    // Filtro por tipo
-    if (typeFilter !== "all") {
-      filtered = filtered.filter((m) => m.type === typeFilter);
-    }
-
-    // Filtro por mes
-    if (monthFilter !== "all") {
-      const monthNum = parseInt(monthFilter);
-      filtered = filtered.filter((m) => m.month === monthNum);
-    }
-
-    // Filtro por categoría
-    if (categoryFilter !== "all") {
-      filtered = filtered.filter((m) => m.category_name === categoryFilter);
-    }
-
-    // Búsqueda por texto
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (m) =>
-          m.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          m.category_name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Ordenar
-    filtered.sort((a, b) => {
-      let aValue: number | string | Date, bValue: number | string | Date;
-
-      switch (sortField) {
-        case "date":
-          aValue = new Date(a.year, a.month - 1, 1);
-          bValue = new Date(b.year, b.month - 1, 1);
-          break;
-        case "amount":
-          aValue = a.amount;
-          bValue = b.amount;
-          break;
-        case "category":
-          aValue = a.category_name;
-          bValue = b.category_name;
-          break;
-        case "type":
-          aValue = a.type;
-          bValue = b.type;
-          break;
-        case "description":
-          aValue = a.description || "";
-          bValue = b.description || "";
-          break;
-        default:
-          return 0;
-      }
-
-      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return filtered;
-  }, [
+  const {
     movements,
-    searchTerm,
-    typeFilter,
-    monthFilter,
-    categoryFilter,
-    sortField,
-    sortDirection,
-  ]);
+    categories,
+    isLoading,
+    deleteMovement,
+    createMovement,
+    updateMovement,
+  } = useMovements(year);
 
-  // Estadísticas
-  const stats = useMemo(() => {
-    const income = movements.filter((m) => m.type === "income");
-    const expenses = movements.filter((m) => m.type === "expense");
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editingMovement, setEditingMovement] = useState<MovementRow | null>(
+    null
+  );
+  const [deletedMovementId, setDeletedMovementId] = useState<string | null>(
+    null
+  );
 
-    const totalIncome = income.reduce((sum, m) => sum + m.amount, 0);
-    const totalExpenses = expenses.reduce((sum, m) => sum + m.amount, 0);
-    const balance = totalIncome - totalExpenses;
-
-    return {
-      totalIncome,
-      totalExpenses,
-      balance,
-      movementsCount: movements.length,
-      incomeCount: income.length,
-      expenseCount: expenses.length,
-    };
-  }, [movements]);
-
-  // Pagination logic
-  const paginationInfo = useMemo(() => {
-    const totalItems = filteredMovements.length;
-    const totalPages = Math.ceil(totalItems / pageSize);
-
-    return {
-      currentPage,
-      pageSize,
-      totalItems,
-      totalPages,
-      hasNextPage: currentPage < totalPages,
-      hasPreviousPage: currentPage > 1,
-    };
-  }, [filteredMovements.length, currentPage, pageSize]);
-
-  const paginatedMovements = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return filteredMovements.slice(startIndex, endIndex);
-  }, [filteredMovements, currentPage, pageSize]);
-
-  // Reset pagination when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    searchTerm,
-    typeFilter,
-    monthFilter,
-    categoryFilter,
-    sortField,
-    sortDirection,
-  ]);
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  };
+  // Usar el hook de filtrado
+  const {
+    filterState,
+    paginatedMovements,
+    paginationInfo,
+    stats,
+    setSearchTerm,
+    setTypeFilter,
+    setMonthFilter,
+    setCategoryFilter,
+    setDateFromFilter,
+    setDateToFilter,
+    setCurrentPage,
+    setPageSize,
+    handleSort,
+    handleSortChange,
+    formatCurrency,
+  } = useMovementsFilter(movements);
 
   const handleDelete = async (movement: MovementRow) => {
-    await deleteMovement.mutateAsync({
-      id: movement.id,
-      type: movement.type,
-    });
+    setDeletedMovementId(movement.id);
+    try {
+      await deleteMovement.mutateAsync({
+        id: movement.id,
+        type: movement.type,
+      });
+      // Mostrar feedback de éxito por 2 segundos
+      setTimeout(() => {
+        setDeletedMovementId(null);
+      }, 2000);
+    } catch {
+      setDeletedMovementId(null);
+    }
   };
 
   const handleCreateMovement = async (params: {
@@ -226,11 +132,29 @@ const Movements = () => {
     await createMovement.mutateAsync(params);
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-ES", {
-      style: "currency",
-      currency: "EUR",
-    }).format(amount);
+  const handleUpdateMovement = async (params: {
+    type: MovementType;
+    categoryId: string;
+    month: number;
+    amount: number;
+    description?: string | null;
+  }) => {
+    if (!editingMovement) return;
+    await updateMovement.mutateAsync({
+      id: editingMovement.id,
+      type: editingMovement.type,
+      patch: {
+        category_id: params.categoryId,
+        month: params.month,
+        amount: params.amount,
+        description: params.description,
+      },
+    });
+    setEditingMovement(null);
+  };
+
+  const handleEdit = (movement: MovementRow) => {
+    setEditingMovement(movement);
   };
 
   if (isLoading) {
@@ -333,14 +257,13 @@ const Movements = () => {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Filtros y búsqueda integrados */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Buscar</label>
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar por descripción o categoría..."
-                  value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8"
                 />
@@ -350,7 +273,6 @@ const Movements = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Tipo</label>
               <Select
-                value={typeFilter}
                 onValueChange={(value: MovementType | "all") =>
                   setTypeFilter(value)
                 }
@@ -368,7 +290,7 @@ const Movements = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Mes</label>
-              <Select value={monthFilter} onValueChange={setMonthFilter}>
+              <Select onValueChange={setMonthFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos los meses" />
                 </SelectTrigger>
@@ -384,8 +306,26 @@ const Movements = () => {
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-medium">Desde</label>
+              <Input
+                type="date"
+                onChange={(e) => setDateFromFilter(e.target.value)}
+                placeholder="Fecha desde"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Hasta</label>
+              <Input
+                type="date"
+                onChange={(e) => setDateToFilter(e.target.value)}
+                placeholder="Fecha hasta"
+              />
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium">Categoría</label>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <Select onValueChange={setCategoryFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todas las categorías" />
                 </SelectTrigger>
@@ -416,8 +356,8 @@ const Movements = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium">Ordenar por</label>
               <Select
-                value={sortField}
-                onValueChange={(value: SortField) => setSortField(value)}
+                value={filterState.selectedSortValue}
+                onValueChange={(value: SortField) => handleSortChange(value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -444,7 +384,22 @@ const Movements = () => {
                   >
                     <div className="flex items-center gap-1">
                       Fecha
-                      <ArrowUpDown className="h-4 w-4" />
+                      <ArrowUpDown
+                        className={`h-4 w-4 ${
+                          filterState.sortField === "date"
+                            ? "text-primary"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                      {filterState.sortField === "date" && (
+                        <div className="text-xs text-primary">
+                          {filterState.sortDirection === "asc" ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
                     </div>
                   </TableHead>
                   <TableHead
@@ -453,7 +408,22 @@ const Movements = () => {
                   >
                     <div className="flex items-center gap-1">
                       Tipo
-                      <ArrowUpDown className="h-4 w-4" />
+                      <ArrowUpDown
+                        className={`h-4 w-4 ${
+                          filterState.sortField === "type"
+                            ? "text-primary"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                      {filterState.sortField === "type" && (
+                        <div className="text-xs text-primary">
+                          {filterState.sortDirection === "asc" ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
                     </div>
                   </TableHead>
                   <TableHead
@@ -462,14 +432,47 @@ const Movements = () => {
                   >
                     <div className="flex items-center gap-1">
                       Categoría
-                      <ArrowUpDown className="h-4 w-4" />
+                      <ArrowUpDown
+                        className={`h-4 w-4 ${
+                          filterState.sortField === "category"
+                            ? "text-primary"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                      {filterState.sortField === "category" && (
+                        <div className="text-xs text-primary">
+                          {filterState.sortDirection === "asc" ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
                     </div>
                   </TableHead>
                   <TableHead
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleSort("description")}
                   >
-                    Descripción
+                    <div className="flex items-center gap-1">
+                      Descripción
+                      <ArrowUpDown
+                        className={`h-4 w-4 ${
+                          filterState.sortField === "description"
+                            ? "text-primary"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                      {filterState.sortField === "description" && (
+                        <div className="text-xs text-primary">
+                          {filterState.sortDirection === "asc" ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </TableHead>
                   <TableHead
                     className="cursor-pointer hover:bg-muted/50 text-right"
@@ -477,7 +480,22 @@ const Movements = () => {
                   >
                     <div className="flex items-center justify-end gap-1">
                       Cantidad
-                      <ArrowUpDown className="h-4 w-4" />
+                      <ArrowUpDown
+                        className={`h-4 w-4 ${
+                          filterState.sortField === "amount"
+                            ? "text-primary"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                      {filterState.sortField === "amount" && (
+                        <div className="text-xs text-primary">
+                          {filterState.sortDirection === "asc" ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )}
+                        </div>
+                      )}
                     </div>
                   </TableHead>
                   <TableHead className="w-[100px]">Acciones</TableHead>
@@ -495,7 +513,14 @@ const Movements = () => {
                   </TableRow>
                 ) : (
                   paginatedMovements.map((movement) => (
-                    <TableRow key={movement.id}>
+                    <TableRow
+                      key={movement.id}
+                      className={
+                        deletedMovementId === movement.id
+                          ? "opacity-50 bg-muted/30"
+                          : ""
+                      }
+                    >
                       <TableCell>
                         <div className="font-medium">
                           {MONTHS[movement.month - 1]} {movement.year}
@@ -543,40 +568,63 @@ const Movements = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button size="sm" variant="ghost">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="sm" variant="ghost">
-                                <Trash2 className="h-4 w-4" />
+                          {deletedMovementId === movement.id ? (
+                            <div className="flex items-center gap-2 text-green-600">
+                              <CheckCircle className="h-4 w-4" />
+                              <span className="text-xs">Eliminado</span>
+                            </div>
+                          ) : (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEdit(movement)}
+                              >
+                                <Edit className="h-4 w-4" />
                               </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  ¿Eliminar movimiento?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Esta acción no se puede deshacer. Se eliminará
-                                  permanentemente el movimiento de{" "}
-                                  {movement.type === "income"
-                                    ? "ingreso"
-                                    : "gasto"}
-                                  .
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDelete(movement)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Eliminar
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={deleteMovement.isPending}
+                                  >
+                                    {deleteMovement.isPending ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      ¿Eliminar movimiento?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Esta acción no se puede deshacer. Se
+                                      eliminará permanentemente el movimiento de{" "}
+                                      {movement.type === "income"
+                                        ? "ingreso"
+                                        : "gasto"}
+                                      .
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancelar
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDelete(movement)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Eliminar
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -603,6 +651,20 @@ const Movements = () => {
         categories={categories ?? null}
         onSubmit={handleCreateMovement}
         onClose={() => setAddDialogOpen(false)}
+      />
+
+      {/* Diálogo para editar movimiento */}
+      <AddMovementDialog
+        open={editingMovement !== null}
+        categories={categories ?? null}
+        movementType={editingMovement?.type ?? null}
+        defaultCategoryId={editingMovement?.category_id ?? null}
+        defaultMonth={editingMovement?.month ?? null}
+        defaultAmount={editingMovement?.amount ?? null}
+        defaultDescription={editingMovement?.description ?? null}
+        isEditing={true}
+        onSubmit={handleUpdateMovement}
+        onClose={() => setEditingMovement(null)}
       />
     </div>
   );

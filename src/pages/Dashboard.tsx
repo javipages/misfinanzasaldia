@@ -51,19 +51,29 @@ const Dashboard = () => {
 
   const months = [
     { value: undefined, label: "Todo el año" },
-    { value: 1, label: "Enero" },
-    { value: 2, label: "Febrero" },
-    { value: 3, label: "Marzo" },
-    { value: 4, label: "Abril" },
-    { value: 5, label: "Mayo" },
-    { value: 6, label: "Junio" },
-    { value: 7, label: "Julio" },
-    { value: 8, label: "Agosto" },
-    { value: 9, label: "Septiembre" },
-    { value: 10, label: "Octubre" },
-    { value: 11, label: "Noviembre" },
-    { value: 12, label: "Diciembre" },
+    { value: 1, label: "Enero", shortLabel: "Ene" },
+    { value: 2, label: "Febrero", shortLabel: "Feb" },
+    { value: 3, label: "Marzo", shortLabel: "Mar" },
+    { value: 4, label: "Abril", shortLabel: "Abr" },
+    { value: 5, label: "Mayo", shortLabel: "May" },
+    { value: 6, label: "Junio", shortLabel: "Jun" },
+    { value: 7, label: "Julio", shortLabel: "Jul" },
+    { value: 8, label: "Agosto", shortLabel: "Ago" },
+    { value: 9, label: "Septiembre", shortLabel: "Sep" },
+    { value: 10, label: "Octubre", shortLabel: "Oct" },
+    { value: 11, label: "Noviembre", shortLabel: "Nov" },
+    { value: 12, label: "Diciembre", shortLabel: "Dic" },
   ];
+
+  const formatComparison = (change: number, selectedMonth?: number) => {
+    const monthInfo = months.find((m) => m.value === selectedMonth);
+    const comparisonText =
+      selectedMonth && monthInfo
+        ? `vs ${monthInfo.shortLabel} ${year - 1}`
+        : `vs ${year - 1}`;
+
+    return `${formatChange(change)} ${comparisonText}`;
+  };
 
   // Chart configurations
   const chartConfig = {
@@ -234,7 +244,10 @@ const Dashboard = () => {
             onClick={() => setShowPreviousYear(!showPreviousYear)}
           >
             <TrendingUp className="h-4 w-4 mr-2" />
-            {showPreviousYear ? "Ocultar" : "Comparar"} Año Anterior
+            {showPreviousYear ? "Ocultar" : "Comparar"}{" "}
+            {selectedMonth
+              ? months.find((m) => m.value === selectedMonth)?.shortLabel
+              : year - 1}
           </Button>
         </div>
       </div>
@@ -244,28 +257,28 @@ const Dashboard = () => {
         <MetricCard
           title="Total Ingresos"
           value={`€${metrics.totalIngresos.toLocaleString()}`}
-          change={`${formatChange(metrics.ingresosChange)} vs mes anterior`}
+          change={formatComparison(metrics.ingresosChange, selectedMonth)}
           icon={TrendingUp}
           variant={metrics.ingresosChange >= 0 ? "success" : "warning"}
         />
         <MetricCard
           title="Total Gastos"
           value={`€${metrics.totalGastos.toLocaleString()}`}
-          change={`${formatChange(metrics.gastosChange)} vs mes anterior`}
+          change={formatComparison(metrics.gastosChange, selectedMonth)}
           icon={TrendingDown}
           variant={metrics.gastosChange <= 0 ? "success" : "warning"}
         />
         <MetricCard
           title="Ahorro Neto"
           value={`€${metrics.totalAhorro.toLocaleString()}`}
-          change={`${formatChange(metrics.ahorroChange)} vs mes anterior`}
+          change={formatComparison(metrics.ahorroChange, selectedMonth)}
           icon={Target}
           variant={metrics.ahorroChange >= 0 ? "success" : "warning"}
         />
         <MetricCard
           title="Patrimonio Total"
           value={`€${metrics.currentPatrimony.toLocaleString()}`}
-          change={`${formatChange(metrics.patrimonioChange)} vs mes anterior`}
+          change={formatComparison(metrics.patrimonioChange, selectedMonth)}
           icon={Wallet}
           variant={metrics.patrimonioChange >= 0 ? "success" : "warning"}
         />
@@ -283,9 +296,15 @@ const Dashboard = () => {
                   }`
                 : `Resumen Mensual ${year}`}
             </CardTitle>
-            {!selectedMonth && showPreviousYear && (
+            {showPreviousYear && (
               <p className="text-sm text-muted-foreground">
-                Comparación con {year - 1}
+                Comparación con{" "}
+                {selectedMonth
+                  ? `${
+                      months.find((m) => m.value === selectedMonth)?.shortLabel
+                    } ${year - 1}`
+                  : `${year - 1}`}{" "}
+                (mismo período)
               </p>
             )}
           </CardHeader>
@@ -476,17 +495,34 @@ const Dashboard = () => {
                       />
                     }
                   />
+                  {/* Real patrimonio line: connectNulls to skip nulls and avoid 0s */}
                   <Line
                     type="monotone"
                     dataKey="patrimonio"
                     stroke="var(--color-patrimonio)"
                     strokeWidth={3}
+                    connectNulls
                     dot={{
                       fill: "var(--color-patrimonio)",
                       strokeWidth: 2,
                       r: 4,
                     }}
                     name="Patrimonio"
+                  />
+                  {/* Prediction dots: not connected, visible with outlined dot */}
+                  <Line
+                    type="monotone"
+                    dataKey="patrimonioPrediccion"
+                    stroke="rgba(59,130,246,0.25)" /* subtle line if any segment appears */
+                    strokeDasharray="3 6"
+                    connectNulls={false}
+                    dot={{
+                      r: 5,
+                      stroke: "var(--color-patrimonio)",
+                      strokeWidth: 2,
+                      fill: "rgba(59,130,246,0.25)",
+                    }}
+                    name="Predicción"
                   />
                 </LineChart>
               </ChartContainer>
