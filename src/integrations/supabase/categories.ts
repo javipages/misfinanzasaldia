@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   TABLE_INCOME_CATEGORIES,
   TABLE_EXPENSE_CATEGORIES,
+  TABLE_ASSET_CATEGORIES,
 } from "@/config/api";
 
 export type CategoryInput = {
@@ -16,6 +17,16 @@ export type CategoryRow = {
   display_order: number;
   created_at: string;
   updated_at: string;
+};
+
+export type AssetCategoryInput = {
+  name: string;
+  type: "cuenta_bancaria" | "inversion" | "efectivo" | "cripto" | "otro";
+  display_order: number;
+};
+
+export type AssetCategoryRow = CategoryRow & {
+  type: AssetCategoryInput["type"];
 };
 
 export async function listIncomeCategories(): Promise<CategoryRow[]> {
@@ -124,6 +135,50 @@ export async function listIncomeEntries(year: number): Promise<EntryRow[]> {
     .eq("year", year);
   if (error) throw error;
   return (data as EntryRow[]) ?? [];
+}
+
+// Asset categories API
+export async function listAssetCategories(): Promise<AssetCategoryRow[]> {
+  const { data, error } = await supabase
+    .from(TABLE_ASSET_CATEGORIES)
+    .select("*")
+    .order("display_order", { ascending: true });
+  if (error) throw error;
+  return (data as AssetCategoryRow[]) ?? [];
+}
+
+export async function createAssetCategory(
+  input: AssetCategoryInput
+): Promise<AssetCategoryRow> {
+  const { data, error } = await supabase
+    .from(TABLE_ASSET_CATEGORIES)
+    .insert([{ ...input }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data as AssetCategoryRow;
+}
+
+export async function updateAssetCategory(
+  id: string,
+  input: Partial<Pick<AssetCategoryInput, "name" | "type" | "display_order">>
+): Promise<AssetCategoryRow> {
+  const { data, error } = await supabase
+    .from(TABLE_ASSET_CATEGORIES)
+    .update({ ...input })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as AssetCategoryRow;
+}
+
+export async function deleteAssetCategory(id: string): Promise<void> {
+  const { error } = await supabase
+    .from(TABLE_ASSET_CATEGORIES)
+    .delete()
+    .eq("id", id);
+  if (error) throw error;
 }
 
 export async function listExpenseEntries(year: number): Promise<EntryRow[]> {

@@ -1,22 +1,19 @@
-import { useEffect, useMemo, useState } from "react";
-import {
-  listIncomeCategories,
-  listExpenseCategories,
-  createIncomeCategory,
-  createExpenseCategory,
-  updateIncomeCategory,
-  updateExpenseCategory,
-  deleteIncomeCategory,
-  deleteExpenseCategory,
-} from "@/integrations/supabase/categories";
-import type { CategoryRow } from "@/integrations/supabase/categories";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useSettings } from "@/hooks/use-settings";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-type EditableCategory = Pick<CategoryRow, "id" | "name" | "display_order">;
+type EditableCategory = { id: string; name: string; display_order: number };
 
 function CategoryList({
   title,
@@ -111,10 +108,33 @@ function CategoryList({
 }
 
 export default function Settings() {
-  const [income, setIncome] = useState<EditableCategory[]>([]);
-  const [expense, setExpense] = useState<EditableCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  type AssetType =
+    | "cuenta_bancaria"
+    | "inversion"
+    | "efectivo"
+    | "cripto"
+    | "otro";
+  const {
+    income,
+    expense,
+    assets,
+    isLoading,
+    isFetching,
+    addIncome,
+    addExpense,
+    addAsset,
+    renameIncome,
+    renameExpense,
+    renameAsset,
+    changeAssetType,
+    moveIncome,
+    moveExpense,
+    deleteIncome,
+    deleteExpense,
+    deleteAsset,
+  } = useSettings();
+  const loading = isLoading;
+  const saving = isFetching;
   const [confirm, setConfirm] = useState<{
     open: boolean;
     id: string | null;
@@ -125,190 +145,51 @@ export default function Settings() {
     scope: null,
   });
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const [inc, exp] = await Promise.all([
-          listIncomeCategories(),
-          listExpenseCategories(),
-        ]);
-        if (!mounted) return;
-        setIncome(
-          (inc ?? []).map((c) => ({
-            id: c.id,
-            name: c.name,
-            display_order: c.display_order,
-          }))
-        );
-        setExpense(
-          (exp ?? []).map((c) => ({
-            id: c.id,
-            name: c.name,
-            display_order: c.display_order,
-          }))
-        );
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  const sortedIncome = income;
+  const sortedExpense = expense;
+  const sortedAssets = assets as (EditableCategory & { type: AssetType })[];
 
-  const sortedIncome = useMemo(
-    () => [...income].sort((a, b) => a.display_order - b.display_order),
-    [income]
-  );
-  const sortedExpense = useMemo(
-    () => [...expense].sort((a, b) => a.display_order - b.display_order),
-    [expense]
-  );
-
-  const nextOrder = (arr: EditableCategory[]) =>
-    arr.length ? Math.max(...arr.map((c) => c.display_order)) + 1 : 0;
+  const [newAssetName, setNewAssetName] = useState("");
+  const [newAssetType, setNewAssetType] =
+    useState<AssetType>("cuenta_bancaria");
 
   if (loading) {
     return <div className="p-4">Cargando...</div>;
   }
 
   async function handleAddIncome(name: string) {
-    setSaving(true);
-    try {
-      const created = await createIncomeCategory({
-        name,
-        display_order: nextOrder(income),
-      });
-      setIncome((prev) => [
-        ...prev,
-        {
-          id: created.id,
-          name: created.name,
-          display_order: created.display_order,
-        },
-      ]);
-    } finally {
-      setSaving(false);
-    }
+    await addIncome.mutateAsync(name);
   }
 
   async function handleAddExpense(name: string) {
-    setSaving(true);
-    try {
-      const created = await createExpenseCategory({
-        name,
-        display_order: nextOrder(expense),
-      });
-      setExpense((prev) => [
-        ...prev,
-        {
-          id: created.id,
-          name: created.name,
-          display_order: created.display_order,
-        },
-      ]);
-    } finally {
-      setSaving(false);
-    }
+    await addExpense.mutateAsync(name);
   }
 
   async function handleRenameIncome(id: string, name: string) {
-    setIncome((prev) => prev.map((c) => (c.id === id ? { ...c, name } : c)));
-    setSaving(true);
-    try {
-      await updateIncomeCategory(id, { name });
-    } finally {
-      setSaving(false);
-    }
+    await renameIncome.mutateAsync({ id, name });
   }
 
   async function handleRenameExpense(id: string, name: string) {
-    setExpense((prev) => prev.map((c) => (c.id === id ? { ...c, name } : c)));
-    setSaving(true);
-    try {
-      await updateExpenseCategory(id, { name });
-    } finally {
-      setSaving(false);
-    }
+    await renameExpense.mutateAsync({ id, name });
   }
 
-  function reorder(arr: EditableCategory[], id: string, dir: "up" | "down") {
-    const ordered = [...arr].sort((a, b) => a.display_order - b.display_order);
-    const index = ordered.findIndex((c) => c.id === id);
-    if (index < 0) return ordered;
-    const swapWith = dir === "up" ? index - 1 : index + 1;
-    if (swapWith < 0 || swapWith >= ordered.length) return ordered;
-    const a = ordered[index];
-    const b = ordered[swapWith];
-    const tmp = a.display_order;
-    a.display_order = b.display_order;
-    b.display_order = tmp;
-    return ordered;
-  }
+  // local reorder helper removed; optimismo se maneja en el hook
 
   async function handleMoveIncome(id: string, direction: "up" | "down") {
-    const updated = reorder(income, id, direction);
-    setIncome(updated);
-    setSaving(true);
-    try {
-      // persist the two affected items
-      const changed = updated
-        .sort((a, b) => a.display_order - b.display_order)
-        .map((c) => c);
-      const before = income.reduce<Record<string, number>>((acc, c) => {
-        acc[c.id] = c.display_order;
-        return acc;
-      }, {});
-      const toPersist = changed.filter((c) => before[c.id] !== c.display_order);
-      await Promise.all(
-        toPersist.map((c) =>
-          updateIncomeCategory(c.id, { display_order: c.display_order })
-        )
-      );
-    } finally {
-      setSaving(false);
-    }
+    // optimistic handled by hook
+    await moveIncome.mutateAsync({ id, direction });
   }
 
   async function handleMoveExpense(id: string, direction: "up" | "down") {
-    const updated = reorder(expense, id, direction);
-    setExpense(updated);
-    setSaving(true);
-    try {
-      const before = expense.reduce<Record<string, number>>((acc, c) => {
-        acc[c.id] = c.display_order;
-        return acc;
-      }, {});
-      const toPersist = updated.filter((c) => before[c.id] !== c.display_order);
-      await Promise.all(
-        toPersist.map((c) =>
-          updateExpenseCategory(c.id, { display_order: c.display_order })
-        )
-      );
-    } finally {
-      setSaving(false);
-    }
+    await moveExpense.mutateAsync({ id, direction });
   }
 
   async function handleDeleteIncome(id: string) {
-    setSaving(true);
-    try {
-      await deleteIncomeCategory(id);
-      setIncome((prev) => prev.filter((c) => c.id !== id));
-    } finally {
-      setSaving(false);
-    }
+    await deleteIncome.mutateAsync(id);
   }
 
   async function handleDeleteExpense(id: string) {
-    setSaving(true);
-    try {
-      await deleteExpenseCategory(id);
-      setExpense((prev) => prev.filter((c) => c.id !== id));
-    } finally {
-      setSaving(false);
-    }
+    await deleteExpense.mutateAsync(id);
   }
 
   return (
@@ -338,6 +219,115 @@ export default function Settings() {
           onMove={handleMoveExpense}
         />
       </div>
+
+      <Separator />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Activos patrimoniales</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2 mb-4">
+            <Input
+              placeholder="Nuevo activo"
+              value={newAssetName}
+              onChange={(e) => setNewAssetName(e.target.value)}
+            />
+            <Select
+              value={newAssetType}
+              onValueChange={(v) => setNewAssetType(v as AssetType)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cuenta_bancaria">Cuenta</SelectItem>
+                <SelectItem value="inversion">Inversión</SelectItem>
+                <SelectItem value="efectivo">Efectivo</SelectItem>
+                <SelectItem value="cripto">Crypto</SelectItem>
+                <SelectItem value="otro">Otro</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              onClick={() => {
+                const trimmed = newAssetName.trim();
+                if (!trimmed) return;
+                void addAsset.mutateAsync({
+                  name: trimmed,
+                  type: newAssetType,
+                });
+                setNewAssetName("");
+                setNewAssetType("cuenta_bancaria");
+              }}
+            >
+              Añadir
+            </Button>
+          </div>
+
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-muted-foreground">
+                  <th className="py-2 pr-2">Nombre</th>
+                  <th className="py-2 pr-2">Tipo</th>
+                  <th className="py-2">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {sortedAssets.map((cat) => (
+                  <tr key={cat.id}>
+                    <td className="py-2 pr-2">
+                      <Input
+                        value={cat.name}
+                        onChange={(e) =>
+                          void renameAsset.mutateAsync({
+                            id: cat.id,
+                            name: e.target.value,
+                          })
+                        }
+                      />
+                    </td>
+                    <td className="py-2 pr-2">
+                      <Select
+                        value={cat.type}
+                        onValueChange={(v) =>
+                          void changeAssetType.mutateAsync({
+                            id: cat.id,
+                            type: v as AssetType,
+                          })
+                        }
+                      >
+                        <SelectTrigger className="w-[200px]">
+                          <SelectValue placeholder="Tipo" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cuenta_bancaria">
+                            Cuenta
+                          </SelectItem>
+                          <SelectItem value="inversion">Inversión</SelectItem>
+                          <SelectItem value="efectivo">Efectivo</SelectItem>
+                          <SelectItem value="cripto">Crypto</SelectItem>
+                          <SelectItem value="otro">Otro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="py-2">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="destructive"
+                          onClick={() => void deleteAsset.mutateAsync(cat.id)}
+                        >
+                          Eliminar
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
       <ConfirmDialog
         open={confirm.open}
         title="Eliminar categoría"

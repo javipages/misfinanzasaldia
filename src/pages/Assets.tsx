@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,12 +11,27 @@ import {
   Wallet,
   TrendingUp,
   DollarSign,
+  GripVertical,
 } from "lucide-react";
+import { useAssets, type AssetItem } from "@/hooks/use-assets";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const Assets = () => {
   const [editingCell, setEditingCell] = useState<string | null>(null);
 
-  // Mock data
+  // months
   const months = [
     "Ene",
     "Feb",
@@ -30,50 +46,83 @@ const Assets = () => {
     "Nov",
     "Dic",
   ];
-  const assetCategories = [
-    {
-      id: 1,
-      name: "Imagin",
-      type: "cuenta_bancaria",
-      icon: Wallet,
-      data: [2500, 2800, 3200, 2900, 3100, 3400, 0, 0, 0, 0, 0, 0],
-    },
-    {
-      id: 2,
-      name: "ING",
-      type: "cuenta_bancaria",
-      icon: Wallet,
-      data: [1200, 1500, 1800, 1600, 1700, 2000, 0, 0, 0, 0, 0, 0],
-    },
-    {
-      id: 3,
-      name: "ING Ahorro",
-      type: "cuenta_bancaria",
-      icon: TrendingUp,
-      data: [5000, 5200, 5400, 5600, 5800, 6000, 0, 0, 0, 0, 0, 0],
-    },
-    {
-      id: 4,
-      name: "Revolut",
-      type: "cuenta_bancaria",
-      icon: Wallet,
-      data: [300, 250, 400, 350, 280, 320, 0, 0, 0, 0, 0, 0],
-    },
-    {
-      id: 5,
-      name: "Derechos de Cobro",
-      type: "inversion",
-      icon: DollarSign,
-      data: [1500, 1500, 1500, 1500, 1500, 1500, 0, 0, 0, 0, 0, 0],
-    },
-    {
-      id: 6,
-      name: "Caja",
-      type: "efectivo",
-      icon: DollarSign,
-      data: [200, 150, 300, 250, 180, 220, 0, 0, 0, 0, 0, 0],
-    },
-  ];
+  const { assets, swapOrder } = useAssets();
+
+  type AssetRow = AssetItem & {
+    icon: typeof Wallet;
+    data: number[];
+  };
+
+  const assetCategories: AssetRow[] = useMemo(
+    () =>
+      (assets ?? []).map((c) => ({
+        ...c,
+        icon:
+          c.type === "cuenta_bancaria"
+            ? Wallet
+            : c.type === "inversion"
+            ? TrendingUp
+            : DollarSign,
+        data: new Array(12).fill(0),
+      })),
+    [assets]
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  function onDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const current = assetCategories;
+    const fromIdx = current.findIndex((r) => r.id === active.id);
+    const toIdx = current.findIndex((r) => r.id === over.id);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const a = current[fromIdx];
+    const b = current[toIdx];
+    void swapOrder.mutateAsync({
+      aId: a.id,
+      aOrder: a.display_order,
+      bId: b.id,
+      bOrder: b.display_order,
+    });
+  }
+
+  function RowHandle({ id }: { id: string }) {
+    const { attributes, listeners } = useSortable({ id });
+    return (
+      <button
+        aria-label="Mover"
+        className="cursor-grab px-2"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </button>
+    );
+  }
+
+  function SortableRow({ id, children }: { id: string; children: ReactNode }) {
+    const { setNodeRef, transform, transition, isDragging } = useSortable({
+      id,
+    });
+    const style: CSSProperties = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.6 : 1,
+    };
+    return (
+      <tr
+        ref={setNodeRef}
+        style={style}
+        id={id}
+        className="border-b border-border/50 hover:bg-muted/30"
+      >
+        {children}
+      </tr>
+    );
+  }
 
   const getTypeConfig = (type: string) => {
     switch (type) {
@@ -108,7 +157,7 @@ const Assets = () => {
   };
 
   const handleCellEdit = (
-    categoryId: number,
+    categoryId: string,
     monthIndex: number,
     value: string
   ) => {
@@ -133,15 +182,16 @@ const Assets = () => {
         </Button>
       </div>
 
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle>Balance Patrimonial 2024</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
+      <div className="overflow-x-auto">
+        <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+          <SortableContext
+            items={assetCategories.map((a) => a.id)}
+            strategy={verticalListSortingStrategy}
+          >
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
+                  <th className="w-6"></th>
                   <th className="text-left p-3 font-semibold text-foreground min-w-[150px]">
                     Activo
                   </th>
@@ -168,10 +218,10 @@ const Assets = () => {
                   const IconComponent = category.icon;
 
                   return (
-                    <tr
-                      key={category.id}
-                      className="border-b border-border/50 hover:bg-muted/30"
-                    >
+                    <SortableRow key={category.id} id={category.id}>
+                      <td className="p-3 w-8 align-middle">
+                        <RowHandle id={category.id} />
+                      </td>
                       <td className="p-3 font-medium text-foreground flex items-center gap-2">
                         <IconComponent className="h-4 w-4" />
                         {category.name}
@@ -243,12 +293,12 @@ const Assets = () => {
                           </Button>
                         </div>
                       </td>
-                    </tr>
+                    </SortableRow>
                   );
                 })}
 
                 <tr className="border-t-2 border-primary/20 bg-muted/20">
-                  <td className="p-3 font-bold text-primary" colSpan={2}>
+                  <td className="p-3 font-bold text-primary" colSpan={3}>
                     PATRIMONIO TOTAL
                   </td>
                   {months.map((_, monthIndex) => (
@@ -272,10 +322,9 @@ const Assets = () => {
                 </tr>
               </tbody>
             </table>
-          </div>
-        </CardContent>
-      </Card>
-
+          </SortableContext>
+        </DndContext>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="shadow-card">
           <CardContent className="p-4">
