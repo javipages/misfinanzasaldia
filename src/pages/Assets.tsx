@@ -18,25 +18,11 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { MONTHS } from "@/utils/constants";
 
 const Assets = () => {
   const [editingCell, setEditingCell] = useState<string | null>(null);
 
-  // months
-  const months = [
-    "Ene",
-    "Feb",
-    "Mar",
-    "Abr",
-    "May",
-    "Jun",
-    "Jul",
-    "Ago",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dic",
-  ];
   const { assets, swapOrder, updateAssetValue } = useAssets();
 
   type AssetRow = AssetItem & {
@@ -207,7 +193,7 @@ const Assets = () => {
                   <th className="text-left p-3 font-semibold text-foreground min-w-[80px]">
                     Tipo
                   </th>
-                  {months.map((month) => (
+                  {MONTHS.map((month) => (
                     <th
                       key={month}
                       className="text-center p-3 font-semibold text-foreground min-w-[80px]"
@@ -289,7 +275,7 @@ const Assets = () => {
                   <td className="p-3 font-bold text-primary" colSpan={3}>
                     TOTAL
                   </td>
-                  {months.map((_, monthIndex) => (
+                  {MONTHS.map((_, monthIndex) => (
                     <td
                       key={monthIndex}
                       className="p-3 text-center font-bold text-primary"

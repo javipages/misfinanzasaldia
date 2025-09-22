@@ -1,56 +1,54 @@
-import { useState } from "react";
+import { useMemo } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Plus, PiggyBank, Target, TrendingUp } from "lucide-react";
+import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useYearStore } from "@/store/year";
+import { useGoals } from "@/hooks/use-goals";
+import { useNavigate } from "react-router-dom";
+import { MONTHS } from "@/utils/constants";
 
 const Savings = () => {
-  const [editingCell, setEditingCell] = useState<string | null>(null);
+  const year = useYearStore((s) => s.year);
+  const navigate = useNavigate();
+  const { monthlyData, totalAhorro, isLoading } = useDashboardData();
+  const { goals } = useGoals();
 
-  // Mock data
-  const months = [
-    "Ene",
-    "Feb",
-    "Mar",
-    "Abr",
-    "May",
-    "Jun",
-    "Jul",
-    "Ago",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dic",
-  ];
-  const savingsData = [500, 750, 600, 850, 700, 900, 0, 0, 0, 0, 0, 0];
+  // Months for headers
 
-  const handleCellEdit = (monthIndex: number, value: string) => {
-    console.log(`Update savings month ${monthIndex}, value: ${value}`);
-    setEditingCell(null);
-  };
+  // Savings computed from dashboard data (ingresos - gastos)
+  const savingsData = useMemo(() => {
+    if (isLoading || !monthlyData?.length) return Array(12).fill(0);
+    // monthlyData already in order Ene..Dic with ahorro
+    return monthlyData.map((m) => Number(m.ahorro) || 0);
+  }, [monthlyData, isLoading]);
 
-  const calculateTotal = () => {
-    return savingsData.reduce((sum, value) => sum + value, 0);
-  };
+  const calculateTotal = useMemo(() => {
+    return Number(totalAhorro) || 0;
+  }, [totalAhorro]);
 
-  const calculateAverage = () => {
-    const nonZeroValues = savingsData.filter((value) => value > 0);
-    return nonZeroValues.length > 0
-      ? nonZeroValues.reduce((sum, value) => sum + value, 0) /
-          nonZeroValues.length
-      : 0;
-  };
+  const calculateAverage = useMemo(() => {
+    const nonZeroValues = savingsData.filter((value: number) => value !== 0);
+    if (!nonZeroValues.length) return 0;
+    const sum = nonZeroValues.reduce((acc: number, v: number) => acc + v, 0);
+    return sum / nonZeroValues.length;
+  }, [savingsData]);
 
-  const getBestMonth = () => {
+  const getBestMonth = useMemo(() => {
     const maxValue = Math.max(...savingsData);
     const monthIndex = savingsData.indexOf(maxValue);
-    return { month: months[monthIndex], value: maxValue };
-  };
+    return { month: MONTHS[monthIndex] ?? "-", value: maxValue };
+  }, [savingsData]);
 
-  const savingsGoal = 10000; // Annual savings goal
-  const currentProgress = (calculateTotal() / savingsGoal) * 100;
+  const savingsGoalEntry = useMemo(
+    () => goals.find((g) => g.category === "annual_savings"),
+    [goals]
+  );
+  const savingsGoal = savingsGoalEntry?.target_amount ?? null;
+  const currentProgress = savingsGoal
+    ? (calculateTotal / savingsGoal) * 100
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -69,53 +67,78 @@ const Savings = () => {
         </Button>
       </div>
 
-      {/* Savings Goal Progress */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            Objetivo de Ahorro 2024
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+      {/* Savings Goal Progress (only if goal exists) */}
+      {savingsGoal ? (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              {savingsGoalEntry?.name || `Objetivo de Ahorro ${year}`}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">
+                  Progreso del objetivo anual
+                </span>
+                <span className="text-sm font-medium">
+                  {currentProgress.toFixed(1)}%
+                </span>
+              </div>
+              <div className="w-full bg-muted rounded-full h-3">
+                <div
+                  className="bg-gradient-to-r from-success to-primary h-3 rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(currentProgress, 100)}%` }}
+                ></div>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  €{calculateTotal.toLocaleString()} ahorrado
+                </span>
+                <span className="text-muted-foreground">
+                  €{savingsGoal.toLocaleString()} objetivo
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Aún no tienes un objetivo de ahorro
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
-                Progreso del objetivo anual
+                Establece un objetivo para medir tu progreso
               </span>
-              <span className="text-sm font-medium">
-                {currentProgress.toFixed(1)}%
-              </span>
+              <Button
+                className="bg-primary hover:bg-primary/90"
+                onClick={() => navigate("/goals")}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Establecer objetivo de ahorro
+              </Button>
             </div>
-            <div className="w-full bg-muted rounded-full h-3">
-              <div
-                className="bg-gradient-to-r from-success to-primary h-3 rounded-full transition-all duration-300"
-                style={{ width: `${Math.min(currentProgress, 100)}%` }}
-              ></div>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">
-                €{calculateTotal().toLocaleString()} ahorrado
-              </span>
-              <span className="text-muted-foreground">
-                €{savingsGoal.toLocaleString()} objetivo
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Monthly Savings Table */}
       <Card className="shadow-card">
         <CardHeader>
-          <CardTitle>Ahorro Mensual 2024</CardTitle>
+          <CardTitle>Ahorro Mensual {year}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border">
-                  {months.map((month) => (
+                  {MONTHS.map((month) => (
                     <th
                       key={month}
                       className="text-center p-3 font-semibold text-foreground min-w-[100px]"
@@ -130,46 +153,15 @@ const Savings = () => {
               </thead>
               <tbody>
                 <tr className="border-b border-border/50 hover:bg-muted/30">
-                  {savingsData.map((value, monthIndex) => {
-                    const cellKey = `savings-${monthIndex}`;
-                    const isEditing = editingCell === cellKey;
-
-                    return (
-                      <td key={monthIndex} className="p-1 text-center">
-                        {isEditing ? (
-                          <Input
-                            type="number"
-                            defaultValue={value}
-                            className="w-20 h-8 text-center"
-                            autoFocus
-                            onBlur={(e) =>
-                              handleCellEdit(monthIndex, e.target.value)
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                handleCellEdit(
-                                  monthIndex,
-                                  e.currentTarget.value
-                                );
-                              }
-                              if (e.key === "Escape") {
-                                setEditingCell(null);
-                              }
-                            }}
-                          />
-                        ) : (
-                          <div
-                            className="p-3 rounded cursor-pointer hover:bg-muted/50 text-success font-medium"
-                            onClick={() => setEditingCell(cellKey)}
-                          >
-                            €{value.toLocaleString()}
-                          </div>
-                        )}
-                      </td>
-                    );
-                  })}
+                  {savingsData.map((value, monthIndex) => (
+                    <td key={monthIndex} className="p-1 text-center">
+                      <div className="p-3 rounded text-success font-medium">
+                        €{value.toLocaleString()}
+                      </div>
+                    </td>
+                  ))}
                   <td className="p-3 text-center font-bold text-success text-lg">
-                    €{calculateTotal().toLocaleString()}
+                    €{calculateTotal.toLocaleString()}
                   </td>
                 </tr>
               </tbody>
@@ -185,7 +177,7 @@ const Savings = () => {
             <PiggyBank className="h-8 w-8 text-success" />
             <div>
               <div className="text-2xl font-bold text-success">
-                €{calculateTotal().toLocaleString()}
+                €{calculateTotal.toLocaleString()}
               </div>
               <div className="text-sm text-muted-foreground">
                 Total ahorrado
@@ -198,7 +190,7 @@ const Savings = () => {
             <TrendingUp className="h-8 w-8 text-info" />
             <div>
               <div className="text-2xl font-bold text-info">
-                €{Math.round(calculateAverage()).toLocaleString()}
+                €{Math.round(calculateAverage).toLocaleString()}
               </div>
               <div className="text-sm text-muted-foreground">
                 Promedio mensual
@@ -211,29 +203,46 @@ const Savings = () => {
             <Target className="h-8 w-8 text-primary" />
             <div>
               <div className="text-2xl font-bold text-primary">
-                €{getBestMonth().value.toLocaleString()}
+                €{getBestMonth.value.toLocaleString()}
               </div>
               <div className="text-sm text-muted-foreground">
-                Mejor mes ({getBestMonth().month})
+                Mejor mes ({getBestMonth.month})
               </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="shadow-card">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-warning/20 flex items-center justify-center">
-              <span className="text-warning font-bold">%</span>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-warning">
-                {currentProgress.toFixed(1)}%
+        {savingsGoal ? (
+          <Card className="shadow-card">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-warning/20 flex items-center justify-center">
+                <span className="text-warning font-bold">%</span>
               </div>
-              <div className="text-sm text-muted-foreground">
-                Objetivo cumplido
+              <div>
+                <div className="text-2xl font-bold text-warning">
+                  {currentProgress.toFixed(1)}%
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Objetivo cumplido
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="shadow-card">
+            <CardContent className="p-4 flex items-center gap-3">
+              <Target className="h-8 w-8 text-primary" />
+              <div>
+                <Button
+                  className="bg-primary hover:bg-primary/90"
+                  onClick={() => navigate("/goals")}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Establecer objetivo
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Savings Analysis */}
@@ -254,7 +263,7 @@ const Savings = () => {
                     className="flex items-center justify-between p-2 rounded bg-muted/30"
                   >
                     <span className="text-sm text-muted-foreground">
-                      {months[index]}
+                      {MONTHS[index]}
                     </span>
                     <span className="font-medium text-success">
                       €{value.toLocaleString()}
@@ -270,10 +279,10 @@ const Savings = () => {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
-                    Ahorro actual (6 meses)
+                    Ahorro actual
                   </span>
                   <span className="font-medium">
-                    €{calculateTotal().toLocaleString()}
+                    €{calculateTotal.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -282,19 +291,21 @@ const Savings = () => {
                   </span>
                   <span className="font-medium text-info">
                     €
-                    {(calculateAverage() * 12)
+                    {(Math.max(0, calculateAverage) * 12)
                       .toFixed(0)
                       .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Falta para objetivo
-                  </span>
-                  <span className="font-medium text-warning">
-                    €{(savingsGoal - calculateTotal()).toLocaleString()}
-                  </span>
-                </div>
+                {savingsGoal && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Falta para objetivo
+                    </span>
+                    <span className="font-medium text-warning">
+                      €{(savingsGoal - calculateTotal).toLocaleString()}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

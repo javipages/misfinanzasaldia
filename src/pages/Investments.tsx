@@ -1,29 +1,10 @@
-import { useState } from "react";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Plus, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
-
+import { MONTHS } from "@/utils/constants";
 const Investments = () => {
-  const [editingCell, setEditingCell] = useState<string | null>(null);
-
   // Mock data
-  const months = [
-    "Ene",
-    "Feb",
-    "Mar",
-    "Abr",
-    "May",
-    "Jun",
-    "Jul",
-    "Ago",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dic",
-  ];
+
   const investments = [
     {
       id: 1,
@@ -107,22 +88,6 @@ const Investments = () => {
     },
   ];
 
-  const calculateMonthlyInvestment = (monthIndex: number) => {
-    return investments
-      .filter((inv) => inv.month === monthIndex)
-      .reduce((sum, inv) => {
-        return inv.type === "entrada" ? sum + inv.amount : sum - inv.amount;
-      }, 0);
-  };
-
-  const calculateMonthlyTrading = (monthIndex: number) => {
-    return tradingOperations
-      .filter((op) => op.month === monthIndex)
-      .reduce((sum, op) => {
-        return op.type === "venta" ? sum + op.amount : sum - op.amount;
-      }, 0);
-  };
-
   const totalInvestments = investments.reduce((sum, inv) => {
     return inv.type === "entrada" ? sum + inv.amount : sum - inv.amount;
   }, 0);
@@ -180,8 +145,7 @@ const Investments = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {months.map((month, monthIndex) => {
-                    const monthlyTotal = calculateMonthlyInvestment(monthIndex);
+                  {MONTHS.map((month, monthIndex) => {
                     const monthlyInvestments = investments.filter(
                       (inv) => inv.month === monthIndex
                     );
@@ -266,7 +230,7 @@ const Investments = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {months.map((month, monthIndex) => {
+                  {MONTHS.map((month, monthIndex) => {
                     const monthlyOperations = tradingOperations.filter(
                       (op) => op.month === monthIndex
                     );

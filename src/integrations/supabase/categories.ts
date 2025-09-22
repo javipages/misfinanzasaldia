@@ -334,3 +334,73 @@ export async function upsertAssetValue(
   if (error) throw error;
   return data as AssetValueRow;
 }
+
+// Goals API
+export type GoalRow = {
+  id: string;
+  user_id: string;
+  name: string;
+  target_amount: number;
+  target_type: string | null;
+  deadline: string | null;
+  category: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  year: number | null;
+  repeat_yearly: boolean;
+};
+
+export type GoalInput = Omit<
+  GoalRow,
+  "id" | "user_id" | "created_at" | "updated_at"
+>;
+
+export async function listGoalsForYear(year: number): Promise<GoalRow[]> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("User not authenticated");
+
+  const { data, error } = await supabase
+    .from("goals")
+    .select("*")
+    .eq("user_id", user.id)
+    .or(`repeat_yearly.eq.true,year.eq.${year}`)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data as GoalRow[]) ?? [];
+}
+
+export async function createGoalRow(input: GoalInput): Promise<GoalRow> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("User not authenticated");
+
+  const { data, error } = await supabase
+    .from("goals")
+    .insert([{ ...input, user_id: user.id }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data as GoalRow;
+}
+
+export async function updateGoalRow(
+  id: string,
+  patch: Partial<GoalInput>
+): Promise<GoalRow> {
+  const { data, error } = await supabase
+    .from("goals")
+    .update({ ...patch })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as GoalRow;
+}
+
+export async function deleteGoalRow(id: string): Promise<void> {
+  const { error } = await supabase.from("goals").delete().eq("id", id);
+  if (error) throw error;
+}
