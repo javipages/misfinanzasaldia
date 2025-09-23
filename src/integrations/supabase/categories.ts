@@ -527,7 +527,7 @@ export async function createOrUpdateInvestment(
     );
 
     // Return the existing investment (no need to modify it)
-    return existingInvestment;
+    return existingInvestment as unknown as InvestmentRow;
   } else {
     // Create new investment
     const { data, error } = await supabase
@@ -548,7 +548,7 @@ export async function createOrUpdateInvestment(
       data.id,
       input.initial_amount,
       input.purchase_date,
-      input.description
+      input.description ?? undefined
     );
 
     return data as unknown as InvestmentRow;
