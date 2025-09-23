@@ -10,7 +10,7 @@ import {
   Settings,
   ArrowUpDown,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/useAuth";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,

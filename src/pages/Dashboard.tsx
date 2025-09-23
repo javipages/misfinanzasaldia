@@ -65,6 +65,8 @@ const Dashboard = () => {
     { value: 12, label: "Diciembre", shortLabel: "Dic" },
   ];
 
+  console.log(data.monthlyData);
+
   const formatComparison = (change: number, selectedMonth?: number) => {
     const monthInfo = months.find((m) => m.value === selectedMonth);
     const comparisonText =
@@ -256,28 +258,28 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="Total Ingresos"
-          value={`€${metrics.totalIngresos.toLocaleString()}`}
+          value={`${metrics.totalIngresos.toLocaleString()}€`}
           change={formatComparison(metrics.ingresosChange, selectedMonth)}
           icon={TrendingUp}
           variant={metrics.ingresosChange >= 0 ? "success" : "warning"}
         />
         <MetricCard
           title="Total Gastos"
-          value={`€${metrics.totalGastos.toLocaleString()}`}
+          value={`${metrics.totalGastos.toLocaleString()}€`}
           change={formatComparison(metrics.gastosChange, selectedMonth)}
           icon={TrendingDown}
           variant={metrics.gastosChange <= 0 ? "success" : "warning"}
         />
         <MetricCard
           title="Ahorro Neto"
-          value={`€${metrics.totalAhorro.toLocaleString()}`}
+          value={`${metrics.totalAhorro.toLocaleString()}€`}
           change={formatComparison(metrics.ahorroChange, selectedMonth)}
           icon={Target}
           variant={metrics.ahorroChange >= 0 ? "success" : "warning"}
         />
         <MetricCard
           title="Patrimonio Total"
-          value={`€${metrics.currentPatrimony.toLocaleString()}`}
+          value={`${metrics.currentPatrimony.toLocaleString()}€`}
           change={formatComparison(metrics.patrimonioChange, selectedMonth)}
           icon={Wallet}
           variant={metrics.patrimonioChange >= 0 ? "success" : "warning"}
@@ -326,7 +328,7 @@ const Dashboard = () => {
                             : name === "ahorro"
                             ? "Ahorro"
                             : name;
-                        return `${label}: €${Number(value).toLocaleString()}`;
+                        return `${label}: ${Number(value).toLocaleString()}€`;
                       }}
                     />
                   }
@@ -341,6 +343,20 @@ const Dashboard = () => {
                   fill="var(--color-gastos)"
                   name="Gastos"
                 />
+                {selectedMonth && showPreviousYear && (
+                  <>
+                    <Bar
+                      dataKey="prevIngresos"
+                      fill="var(--color-prevIngresos)"
+                      name="Ingresos Año Anterior"
+                    />
+                    <Bar
+                      dataKey="prevGastos"
+                      fill="var(--color-prevGastos)"
+                      name="Gastos Año Anterior"
+                    />
+                  </>
+                )}
                 {!selectedMonth && showPreviousYear && (
                   <>
                     <Line
@@ -398,7 +414,7 @@ const Dashboard = () => {
                 </Pie>
                 <Tooltip
                   formatter={(value) =>
-                    `Gasto: €${Number(value).toLocaleString()}`
+                    `Gasto: ${Number(value).toLocaleString()}€`
                   }
                   contentStyle={{
                     backgroundColor: "hsl(var(--popover))",
@@ -430,7 +446,7 @@ const Dashboard = () => {
                     </span>
                   </div>
                   <span className="text-sm font-medium">
-                    €{category.value.toLocaleString()}
+                    {category.value.toLocaleString()}€
                   </span>
                 </div>
               ))}
@@ -490,7 +506,7 @@ const Dashboard = () => {
                     content={
                       <ChartTooltipContent
                         formatter={(value) =>
-                          `Patrimonio: €${Number(value).toLocaleString()}`
+                          `Patrimonio: ${Number(value).toLocaleString()}€`
                         }
                       />
                     }
@@ -588,6 +604,9 @@ const Dashboard = () => {
                     Promedio mensual
                   </span>
                   <span className="font-medium">
+                    {(
+                      metrics.totalIngresos / (selectedMonth ? 1 : 12)
+                    ).toLocaleString()}
                     €
                     {(
                       metrics.totalIngresos / (selectedMonth ? 1 : 12)

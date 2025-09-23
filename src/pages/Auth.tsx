@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/useAuth";
+import type { AuthContextType } from "@/contexts/auth-context";
+// import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,27 +17,27 @@ import { AlertCircle, Mail, Lock } from "lucide-react";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const { signIn } = useAuth();
-  const navigate = useNavigate();
+  const auth = useAuth() as AuthContextType;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    const { error } = await signIn(email, password);
-
+    const { error } = await auth.sendMagicLink(email);
     if (error) {
-      setError("Credenciales incorrectas. Por favor, inténtalo de nuevo.");
+      setError("No pudimos enviar el enlace. Revisa el correo e inténtalo.");
     } else {
-      navigate("/");
+      setSent(true);
     }
 
     setLoading(false);
   };
+
+  // Sin reenvío programado; el usuario puede presionar "Enviar enlace" de nuevo
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -49,7 +50,9 @@ const Auth = () => {
             Iniciar sesión
           </CardTitle>
           <CardDescription className="text-center">
-            Ingresa tu correo y contraseña para acceder a tu cuenta
+            {sent
+              ? "Te enviamos un enlace de acceso. Revisa tu correo."
+              : "Ingresa tu correo para recibir un enlace de acceso"}
           </CardDescription>
         </CardHeader>
 
@@ -62,7 +65,7 @@ const Auth = () => {
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-2 mb-4">
               <Label htmlFor="email">Correo electrónico</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -75,31 +78,20 @@ const Auth = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
                   required
+                  disabled={sent}
                 />
               </div>
             </div>
-
-            <div className="space-y-2 mb-3">
-              <Label htmlFor="password">Contraseña</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4  text-gray-400" />
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-              </div>
-            </div>
+            {/* No OTP input when using magic link */}
           </CardContent>
 
           <CardFooter>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Iniciando sesión..." : "Iniciar sesión"}
+              {loading
+                ? "Enviando..."
+                : sent
+                ? "Enlace enviado"
+                : "Enviar enlace"}
             </Button>
           </CardFooter>
         </form>

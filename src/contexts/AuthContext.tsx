@@ -1,29 +1,10 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
-import type { Session, AuthError } from "@supabase/supabase-js";
+import { useEffect, useState, type ReactNode } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { AuthContext } from "./auth-context";
+// Types are declared in auth-context.ts; no direct type imports needed here
 
-type AuthContextType = {
-  session: Session | null;
-  loading: boolean;
-  signIn: (
-    email: string,
-    password: string
-  ) => Promise<{ error: AuthError | null }>;
-  signOut: () => Promise<{ error: AuthError | null }>;
-};
-
-const AuthContext = createContext<AuthContextType>({
-  session: null,
-  loading: true,
-  signIn: async () => ({ error: null }),
-  signOut: async () => ({ error: null }),
-});
+// Context moved to its own file to keep this component-only export
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
@@ -47,10 +28,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+  const sendMagicLink = async (email: string) => {
+    // Sends a magic link according to Supabase Email provider settings
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      password,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: window.location.origin,
+      },
     });
     return { error };
   };
@@ -61,16 +46,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, loading, sendMagicLink, signOut }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
+// Hook moved to separate file to keep this file exporting only components for fast refresh
