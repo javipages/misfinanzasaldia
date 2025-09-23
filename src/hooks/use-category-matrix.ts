@@ -23,6 +23,41 @@ const QK = {
   entries: (kind: Kind, year: number) => ["entries", kind, year] as const,
 };
 
+export function useAllCategories() {
+  const incomeCategoriesQuery = useQuery({
+    queryKey: QK.categories("income"),
+    queryFn: async () => {
+      const rows = await listIncomeCategories();
+      return rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        display_order: r.display_order,
+      }));
+    },
+  });
+
+  const expenseCategoriesQuery = useQuery({
+    queryKey: QK.categories("expense"),
+    queryFn: async () => {
+      const rows = await listExpenseCategories();
+      return rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        display_order: r.display_order,
+      }));
+    },
+  });
+
+  return {
+    incomeCategories: incomeCategoriesQuery.data ?? [],
+    expenseCategories: expenseCategoriesQuery.data ?? [],
+    isLoading:
+      incomeCategoriesQuery.isLoading || expenseCategoriesQuery.isLoading,
+    isFetching:
+      incomeCategoriesQuery.isFetching || expenseCategoriesQuery.isFetching,
+  };
+}
+
 export function useCategoryMatrix(kind: Kind, year: number) {
   const qc = useQueryClient();
 
