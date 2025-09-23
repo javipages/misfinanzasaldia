@@ -10,6 +10,7 @@ import {
   Loader2,
   ChevronUp,
   ChevronDown,
+  FileText,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -42,6 +43,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AddMovementDialog } from "@/components/ui/add-movement-dialog";
 import { TablePagination } from "@/components/ui/table-pagination";
+import { ImportBudgetDialog } from "@/components/ui/import-budget-dialog";
 import { useYearStore } from "@/store/year";
 import {
   useMovements,
@@ -70,6 +72,7 @@ const MONTHS = [
 
 const Movements = () => {
   const year = useYearStore((s) => s.year);
+  const [refreshKey, setRefreshKey] = useState(0);
   const {
     movements,
     categories,
@@ -77,7 +80,7 @@ const Movements = () => {
     deleteMovement,
     createMovement,
     updateMovement,
-  } = useMovements(year);
+  } = useMovements(year + refreshKey);
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingMovement, setEditingMovement] = useState<MovementRow | null>(
@@ -157,6 +160,11 @@ const Movements = () => {
     setEditingMovement(movement);
   };
 
+  const handleImportSuccess = () => {
+    // Force refresh of the data
+    setRefreshKey((prev) => prev + 1);
+  };
+
   if (isLoading) {
     return <div className="p-6">Cargando movimientos...</div>;
   }
@@ -173,10 +181,18 @@ const Movements = () => {
             Vista completa de todos tus ingresos y gastos
           </p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo movimiento
-        </Button>
+        <div className="flex gap-2">
+          <ImportBudgetDialog onSuccess={handleImportSuccess}>
+            <Button variant="outline">
+              <FileText className="h-4 w-4 mr-2" />
+              Importar JSON
+            </Button>
+          </ImportBudgetDialog>
+          <Button onClick={() => setAddDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo movimiento
+          </Button>
+        </div>
       </div>
 
       {/* Estadísticas */}

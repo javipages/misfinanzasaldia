@@ -1,326 +1,643 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ArrowUp, ArrowDown, TrendingUp } from "lucide-react";
-import { MONTHS } from "@/utils/constants";
+import { Badge } from "@/components/ui/badge";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  TrendingUp,
+  TrendingDown,
+  GripVertical,
+  Calendar,
+  Euro,
+  Percent,
+} from "lucide-react";
+import { useInvestments, type InvestmentItem } from "@/hooks/use-investments";
+import { AddInvestmentDialog } from "@/components/ui/add-investment-dialog";
+import { InvestmentSelectionDialog } from "@/components/ui/investment-selection-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
 const Investments = () => {
-  // Mock data
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectionDialogOpen, setSelectionDialogOpen] = useState(false);
+  const [editingInvestment, setEditingInvestment] = useState<
+    InvestmentItem | undefined
+  >(undefined);
 
-  const investments = [
-    {
-      id: 1,
-      month: 0,
-      type: "entrada",
-      amount: 1000,
-      description: "Inversión inicial ETF Mundial",
-    },
-    {
-      id: 2,
-      month: 1,
-      type: "entrada",
-      amount: 500,
-      description: "Aportación mensual",
-    },
-    {
-      id: 3,
-      month: 2,
-      type: "entrada",
-      amount: 500,
-      description: "Aportación mensual",
-    },
-    {
-      id: 4,
-      month: 3,
-      type: "retirada",
-      amount: 200,
-      description: "Retirada parcial",
-    },
-    {
-      id: 5,
-      month: 4,
-      type: "entrada",
-      amount: 750,
-      description: "Aportación extra",
-    },
-    {
-      id: 6,
-      month: 5,
-      type: "entrada",
-      amount: 500,
-      description: "Aportación mensual",
-    },
-  ];
+  const {
+    investments,
+    accounts,
+    monthlySummary,
+    swapOrder,
+    deleteInvestment,
+    addInvestment,
+    updateInvestment,
+    addInvestmentValue,
+    isLoading,
+  } = useInvestments();
 
-  const tradingOperations = [
-    {
-      id: 1,
-      month: 1,
-      type: "compra",
-      amount: 2000,
-      description: "Acciones Apple",
-    },
-    {
-      id: 2,
-      month: 2,
-      type: "venta",
-      amount: 2200,
-      description: "Venta Apple (+10%)",
-    },
-    {
-      id: 3,
-      month: 3,
-      type: "compra",
-      amount: 1500,
-      description: "Acciones Tesla",
-    },
-    {
-      id: 4,
-      month: 4,
-      type: "compra",
-      amount: 1000,
-      description: "Acciones Microsoft",
-    },
-    {
-      id: 5,
-      month: 5,
-      type: "venta",
-      amount: 1600,
-      description: "Venta Tesla (+6.7%)",
-    },
-  ];
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
-  const totalInvestments = investments.reduce((sum, inv) => {
-    return inv.type === "entrada" ? sum + inv.amount : sum - inv.amount;
-  }, 0);
+  function onDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const current = investments;
+    const fromIdx = current.findIndex((r) => r.id === active.id);
+    const toIdx = current.findIndex((r) => r.id === over.id);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const a = current[fromIdx];
+    const b = current[toIdx];
+    void swapOrder.mutateAsync({
+      aId: a.id,
+      aOrder: a.display_order,
+      bId: b.id,
+      bOrder: b.display_order,
+    });
+  }
 
-  const totalTrading = tradingOperations.reduce((sum, op) => {
-    return op.type === "venta" ? sum + op.amount : sum - op.amount;
-  }, 0);
+  function RowHandle({ id }: { id: string }) {
+    const { attributes, listeners } = useSortable({ id });
+    return (
+      <button
+        aria-label="Mover"
+        className="cursor-grab px-2 hover:bg-muted/50 rounded"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </button>
+    );
+  }
+
+  function SortableRow({
+    id,
+    children,
+  }: {
+    id: string;
+    children: React.ReactNode;
+  }) {
+    const { setNodeRef, transform, transition, isDragging } = useSortable({
+      id,
+    });
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.6 : 1,
+    };
+    return (
+      <tr
+        ref={setNodeRef}
+        style={style}
+        id={id}
+        className="border-b border-border/50 hover:bg-muted/30"
+      >
+        {children}
+      </tr>
+    );
+  }
+
+  const handleAddInvestment = () => {
+    setEditingInvestment(undefined);
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditingInvestment(undefined);
+  };
+
+  const handleEditInvestment = () => {
+    setSelectionDialogOpen(true);
+  };
+
+  const handleSelectInvestment = (investment: InvestmentItem) => {
+    setEditingInvestment(investment);
+    setSelectionDialogOpen(false);
+    setDialogOpen(true);
+  };
+
+  const handleCloseSelectionDialog = () => {
+    setSelectionDialogOpen(false);
+  };
+
+  const handleDeleteInvestment = async (id: string) => {
+    try {
+      await deleteInvestment.mutateAsync(id);
+    } catch (error) {
+      console.error("Error deleting investment:", error);
+    }
+  };
+
+  const handleDialogSubmit = async (investmentData: {
+    name: string;
+    type: "etf" | "acciones" | "crypto" | "fondos" | "bonos" | "otros";
+    initial_amount: number;
+    account_id: string;
+    purchase_date: string;
+    description?: string;
+  }) => {
+    try {
+      if (editingInvestment) {
+        // Update existing investment
+        await updateInvestment.mutateAsync({
+          id: editingInvestment.id,
+          input: {
+            name: investmentData.name,
+            type: investmentData.type,
+            initial_amount: investmentData.initial_amount,
+            account_id: investmentData.account_id,
+            purchase_date: investmentData.purchase_date,
+            description: investmentData.description,
+          },
+        });
+      } else {
+        // Create new investment
+        await addInvestment.mutateAsync(investmentData);
+      }
+      // Close dialog and reset state
+      setDialogOpen(false);
+      setEditingInvestment(undefined);
+    } catch (error) {
+      console.error("Error saving investment:", error);
+    }
+  };
+
+  const handleAddToExisting = async (
+    existingInvestmentId: string,
+    amount: number,
+    date: string,
+    description?: string
+  ) => {
+    try {
+      await addInvestmentValue.mutateAsync({
+        investmentId: existingInvestmentId,
+        amount,
+        contributionDate: date,
+        description,
+      });
+      // Close dialog and reset state
+      setDialogOpen(false);
+    } catch (error) {
+      console.error("Error adding to investment:", error);
+    }
+  };
+
+  const getTypeConfig = (type: string) => {
+    const configs = {
+      etf: { label: "ETF", color: "bg-blue-100 text-blue-800" },
+      acciones: { label: "Acciones", color: "bg-green-100 text-green-800" },
+      crypto: { label: "Crypto", color: "bg-orange-100 text-orange-800" },
+      fondos: { label: "Fondos", color: "bg-purple-100 text-purple-800" },
+      bonos: { label: "Bonos", color: "bg-indigo-100 text-indigo-800" },
+      otros: { label: "Otros", color: "bg-gray-100 text-gray-800" },
+    };
+    return configs[type as keyof typeof configs] || configs.otros;
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("es-ES", {
+      style: "currency",
+      currency: "EUR",
+      minimumFractionDigits: 2,
+    }).format(amount);
+  };
+
+  const formatPercentage = (percentage: number) => {
+    return `${percentage >= 0 ? "+" : ""}${percentage.toFixed(1)}%`;
+  };
+
+  // Prepare existing investments data for the dialog
+  const existingInvestmentsData = investments
+    .filter((investment) => investment.total_invested_amount > 0) // Only show investments that have contributions
+    .map((investment) => ({
+      id: investment.id,
+      name: investment.name,
+      account_name: investment.account_name,
+      total_amount: investment.total_invested_amount,
+    }));
+
+  // Calculate totals using current investment amounts
+  const totalInvested = investments.reduce(
+    (sum, inv) => sum + inv.total_invested_amount,
+    0
+  );
+  const totalCurrentValue = investments.reduce(
+    (sum, inv) => sum + inv.current_account_value,
+    0
+  );
+  const totalProfitLoss = totalCurrentValue - totalInvested;
+  const totalProfitLossPercentage =
+    totalInvested > 0 ? (totalProfitLoss / totalInvested) * 100 : 0;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Inversiones</h1>
+            <p className="text-muted-foreground">
+              Gestiona tu portafolio de inversiones
+            </p>
+          </div>
+          <Button onClick={handleAddInvestment}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Inversión
+          </Button>
+        </div>
+        <div className="text-center py-8">Cargando inversiones...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            Inversiones y Trading
-          </h1>
+          <h1 className="text-3xl font-bold text-foreground">Inversiones</h1>
           <p className="text-muted-foreground">
-            Gestiona tus inversiones a largo plazo y operaciones de trading
+            Gestiona tu portafolio de inversiones y trackea tus ganancias
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button className="bg-success hover:bg-success/90">
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Inversión
-          </Button>
-          <Button className="bg-info hover:bg-info/90">
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Operación
-          </Button>
-        </div>
+        <Button onClick={handleAddInvestment}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nueva Inversión
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Investments Table */}
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-success" />
-              Inversiones a Largo Plazo
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-foreground">
+                  {formatCurrency(totalInvested)}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Total invertido actual
+                </div>
+              </div>
+              <Euro className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-2xl font-bold text-foreground">
+                  {formatCurrency(totalCurrentValue)}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Valor actual
+                </div>
+              </div>
+              <TrendingUp className="h-8 w-8 text-success" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div
+                  className={`text-2xl font-bold ${
+                    totalProfitLoss >= 0 ? "text-success" : "text-destructive"
+                  }`}
+                >
+                  {formatCurrency(totalProfitLoss)}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Ganancia/Pérdida
+                </div>
+              </div>
+              {totalProfitLoss >= 0 ? (
+                <TrendingUp className="h-8 w-8 text-success" />
+              ) : (
+                <TrendingDown className="h-8 w-8 text-destructive" />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-card">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div
+                  className={`text-2xl font-bold ${
+                    totalProfitLossPercentage >= 0
+                      ? "text-success"
+                      : "text-destructive"
+                  }`}
+                >
+                  {formatPercentage(totalProfitLossPercentage)}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Rentabilidad
+                </div>
+              </div>
+              <Percent className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Investments Table */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle>Portafolio de Inversiones</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+              <SortableContext
+                items={investments.map((investment) => investment.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="w-6"></th>
+                      <th className="text-left p-3 font-semibold text-foreground">
+                        Inversión
+                      </th>
+                      <th className="text-center p-3 font-semibold text-foreground">
+                        Tipo
+                      </th>
+                      <th className="text-center p-3 font-semibold text-foreground">
+                        Cuenta
+                      </th>
+                      <th className="text-center p-3 font-semibold text-foreground">
+                        Invertido Actual
+                      </th>
+                      <th className="text-center p-3 font-semibold text-foreground">
+                        Valor Actual
+                      </th>
+                      <th className="text-center p-3 font-semibold text-foreground">
+                        G/P
+                      </th>
+                      <th className="text-center p-3 font-semibold text-foreground">
+                        Rentabilidad
+                      </th>
+                      <th className="text-center p-3 font-semibold text-foreground">
+                        Fecha Compra
+                      </th>
+                      <th className="text-center p-3 font-semibold text-foreground">
+                        Acciones
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {investments.map((investment) => {
+                      const typeConfig = getTypeConfig(investment.type);
+                      const isProfit = investment.profit_loss >= 0;
+
+                      return (
+                        <SortableRow key={investment.id} id={investment.id}>
+                          <td className="p-3 w-8 align-middle">
+                            <RowHandle id={investment.id} />
+                          </td>
+                          <td className="p-3">
+                            <div className="font-medium text-foreground">
+                              {investment.name}
+                            </div>
+                            {investment.description && (
+                              <div className="text-sm text-muted-foreground">
+                                {investment.description}
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge className={typeConfig.color}>
+                              {typeConfig.label}
+                            </Badge>
+                          </td>
+                          <td className="p-3 text-center">
+                            <div className="font-medium text-foreground">
+                              {investment.account_name}
+                            </div>
+                          </td>
+                          <td className="p-3 text-center font-medium">
+                            {formatCurrency(investment.total_invested_amount)}
+                          </td>
+                          <td className="p-3 text-center font-medium">
+                            {formatCurrency(investment.current_account_value)}
+                          </td>
+                          <td className="p-3 text-center">
+                            <div
+                              className={`font-bold ${
+                                isProfit ? "text-success" : "text-destructive"
+                              }`}
+                            >
+                              {isProfit ? "+" : ""}
+                              {formatCurrency(investment.profit_loss)}
+                            </div>
+                          </td>
+                          <td className="p-3 text-center">
+                            <div
+                              className={`font-bold ${
+                                isProfit ? "text-success" : "text-destructive"
+                              }`}
+                            >
+                              {formatPercentage(
+                                investment.profit_loss_percentage
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-3 text-center text-sm text-muted-foreground">
+                            <div className="flex items-center justify-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDate(investment.purchase_date)}
+                            </div>
+                          </td>
+                          <td className="p-3 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditInvestment()}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Eliminar inversión
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      ¿Estás seguro de que quieres eliminar "
+                                      {investment.name}"? Esta acción no se
+                                      puede deshacer.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancelar
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() =>
+                                        handleDeleteInvestment(investment.id)
+                                      }
+                                      className="bg-destructive hover:bg-destructive/90"
+                                    >
+                                      Eliminar
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </td>
+                        </SortableRow>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </SortableContext>
+            </DndContext>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Monthly Investment Summary Table */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle>Resumen de Inversiones por Mes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {monthlySummary.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No hay inversiones registradas
+            </div>
+          ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left p-2 font-semibold text-foreground">
+                    <th className="text-left p-3 font-semibold text-foreground">
+                      Año
+                    </th>
+                    <th className="text-left p-3 font-semibold text-foreground">
                       Mes
                     </th>
-                    <th className="text-center p-2 font-semibold text-foreground">
-                      Tipo
+                    <th className="text-center p-3 font-semibold text-foreground">
+                      Inversiones
                     </th>
-                    <th className="text-center p-2 font-semibold text-foreground">
-                      Importe
+                    <th className="text-right p-3 font-semibold text-foreground">
+                      Total Invertido
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {MONTHS.map((month, monthIndex) => {
-                    const monthlyInvestments = investments.filter(
-                      (inv) => inv.month === monthIndex
-                    );
-
-                    if (monthlyInvestments.length === 0) return null;
-
-                    return monthlyInvestments.map((investment, idx) => (
-                      <tr
-                        key={investment.id}
-                        className="border-b border-border/50 hover:bg-muted/30"
-                      >
-                        {idx === 0 && (
-                          <td
-                            className="p-2 font-medium text-foreground"
-                            rowSpan={monthlyInvestments.length}
-                          >
-                            {month}
-                          </td>
-                        )}
-                        <td className="p-2 text-center">
-                          <span
-                            className={`px-2 py-1 text-xs rounded-full font-medium ${
-                              investment.type === "entrada"
-                                ? "bg-success/20 text-success"
-                                : "bg-destructive/20 text-destructive"
-                            }`}
-                          >
-                            {investment.type === "entrada" ? (
-                              <>
-                                <ArrowUp className="inline h-3 w-3 mr-1" />
-                                Entrada
-                              </>
-                            ) : (
-                              <>
-                                <ArrowDown className="inline h-3 w-3 mr-1" />
-                                Retirada
-                              </>
-                            )}
-                          </span>
-                        </td>
-                        <td className="p-2 text-center font-medium text-foreground">
-                          €{investment.amount.toLocaleString()}
-                        </td>
-                      </tr>
-                    ));
-                  })}
-                  <tr className="border-t-2 border-success/20 bg-muted/20">
-                    <td className="p-2 font-bold text-success">TOTAL</td>
-                    <td className="p-2"></td>
-                    <td className="p-2 text-center font-bold text-success">
-                      €{totalInvestments.toLocaleString()}
+                  {monthlySummary.map((summary) => (
+                    <tr
+                      key={`${summary.year}-${summary.month}`}
+                      className="border-b border-border/50 hover:bg-muted/30"
+                    >
+                      <td className="p-3 font-medium text-foreground">
+                        {summary.year}
+                      </td>
+                      <td className="p-3 text-foreground">
+                        {summary.month_name}
+                      </td>
+                      <td className="p-3 text-center text-muted-foreground">
+                        {summary.investment_count}
+                      </td>
+                      <td className="p-3 text-right font-medium text-foreground">
+                        {formatCurrency(summary.total_invested)}
+                      </td>
+                    </tr>
+                  ))}
+                  {/* Total row */}
+                  <tr className="border-t-2 border-border font-semibold bg-muted/20">
+                    <td className="p-3 text-foreground" colSpan={3}>
+                      Total General
+                    </td>
+                    <td className="p-3 text-right text-foreground">
+                      {formatCurrency(
+                        monthlySummary.reduce(
+                          (sum, item) => sum + item.total_invested,
+                          0
+                        )
+                      )}
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Trading Table */}
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-info" />
-              Operaciones de Trading
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left p-2 font-semibold text-foreground">
-                      Mes
-                    </th>
-                    <th className="text-center p-2 font-semibold text-foreground">
-                      Tipo
-                    </th>
-                    <th className="text-center p-2 font-semibold text-foreground">
-                      Importe
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {MONTHS.map((month, monthIndex) => {
-                    const monthlyOperations = tradingOperations.filter(
-                      (op) => op.month === monthIndex
-                    );
+      {/* Dialog for selecting investment to edit */}
+      <InvestmentSelectionDialog
+        open={selectionDialogOpen}
+        onClose={handleCloseSelectionDialog}
+        onSelectInvestment={handleSelectInvestment}
+        investments={investments}
+      />
 
-                    if (monthlyOperations.length === 0) return null;
-
-                    return monthlyOperations.map((operation, idx) => (
-                      <tr
-                        key={operation.id}
-                        className="border-b border-border/50 hover:bg-muted/30"
-                      >
-                        {idx === 0 && (
-                          <td
-                            className="p-2 font-medium text-foreground"
-                            rowSpan={monthlyOperations.length}
-                          >
-                            {month}
-                          </td>
-                        )}
-                        <td className="p-2 text-center">
-                          <span
-                            className={`px-2 py-1 text-xs rounded-full font-medium ${
-                              operation.type === "compra"
-                                ? "bg-warning/20 text-warning"
-                                : "bg-info/20 text-info"
-                            }`}
-                          >
-                            {operation.type === "compra" ? (
-                              <>
-                                <ArrowDown className="inline h-3 w-3 mr-1" />
-                                Compra
-                              </>
-                            ) : (
-                              <>
-                                <ArrowUp className="inline h-3 w-3 mr-1" />
-                                Venta
-                              </>
-                            )}
-                          </span>
-                        </td>
-                        <td className="p-2 text-center font-medium text-foreground">
-                          €{operation.amount.toLocaleString()}
-                        </td>
-                      </tr>
-                    ));
-                  })}
-                  <tr className="border-t-2 border-info/20 bg-muted/20">
-                    <td className="p-2 font-bold text-info">BALANCE</td>
-                    <td className="p-2"></td>
-                    <td className="p-2 text-center font-bold text-info">
-                      €{totalTrading.toLocaleString()}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="shadow-card">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-success">
-              €{totalInvestments.toLocaleString()}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Inversión neta total
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-card">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-info">
-              €{totalTrading.toLocaleString()}
-            </div>
-            <div className="text-sm text-muted-foreground">Balance trading</div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-card">
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-primary">
-              €{(totalInvestments + totalTrading).toLocaleString()}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              Total actividad inversora
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Dialog for adding/editing investments */}
+      <AddInvestmentDialog
+        open={dialogOpen}
+        onClose={handleCloseDialog}
+        onSubmit={handleDialogSubmit}
+        onAddToExisting={handleAddToExisting}
+        initialData={editingInvestment}
+        availableAccounts={accounts.map((account) => ({
+          id: account.id,
+          name: account.name,
+        }))}
+        existingInvestments={existingInvestmentsData}
+        isEditing={!!editingInvestment}
+      />
     </div>
   );
 };

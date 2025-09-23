@@ -197,7 +197,7 @@ const Dashboard = () => {
       </div>
     );
   }
-
+  console.log(showPreviousYear);
   return (
     <div className="space-y-6">
       {/* Header with filters */}
@@ -312,7 +312,12 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig}>
-              <ComposedChart data={data.monthlyData}>
+              <ComposedChart
+                data={data.monthlyData}
+                key={`monthly-${selectedMonth ?? "all"}-${
+                  showPreviousYear ? "prev-on" : "prev-off"
+                }`}
+              >
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                 <XAxis dataKey="month" />
                 <YAxis />
@@ -343,7 +348,7 @@ const Dashboard = () => {
                   fill="var(--color-gastos)"
                   name="Gastos"
                 />
-                {selectedMonth && showPreviousYear && (
+                {showPreviousYear && (
                   <>
                     <Bar
                       dataKey="prevIngresos"
@@ -357,7 +362,7 @@ const Dashboard = () => {
                     />
                   </>
                 )}
-                {!selectedMonth && showPreviousYear && (
+                {showPreviousYear && (
                   <>
                     <Line
                       type="monotone"

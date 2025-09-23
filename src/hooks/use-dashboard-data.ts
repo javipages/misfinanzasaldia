@@ -16,6 +16,10 @@ export interface MonthlyData {
   ahorro: number;
   patrimonio?: number | null;
   patrimonioPrediccion?: number;
+  // previous year comparison fields (optional so consumers can narrow by view)
+  prevIngresos?: number;
+  prevGastos?: number;
+  prevPatrimonio?: number;
 }
 
 interface AssetValue {
@@ -125,7 +129,8 @@ export function useDashboardData(selectedMonth?: number) {
       assetsLoading ||
       categoriesQuery.isLoading ||
       categoriesQuery.isFetching ||
-      previousYearValuesQuery.isLoading
+      previousYearValuesQuery.isLoading ||
+      previousYearQuery.isLoading
     ) {
       return {
         monthlyData: [],
@@ -342,6 +347,7 @@ export function useDashboardData(selectedMonth?: number) {
     currentYearQuery.data,
     currentYearQuery.isLoading,
     previousYearQuery.data,
+    previousYearQuery.isLoading,
     previousYearValuesQuery.data,
     assets,
     assetsLoading,
