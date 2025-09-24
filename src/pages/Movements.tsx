@@ -42,6 +42,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { AddMovementDialog } from "@/components/ui/add-movement-dialog";
+import { ExportDialog } from "@/components/ui/export-dialog";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { ImportBudgetDialog } from "@/components/ui/import-budget-dialog";
 import { useYearStore } from "@/store/year";
@@ -188,6 +189,10 @@ const Movements = () => {
               Importar JSON
             </Button>
           </ImportBudgetDialog>
+          <ExportDialog
+            title="Exportar Movimientos"
+            description="Exporta todos tus movimientos financieros en diferentes formatos"
+          />
           <Button
             onClick={() => setAddDialogOpen(true)}
             className="w-full sm:w-auto"

@@ -21,6 +21,14 @@ export type MovementRow = EntryRow & {
   category_name: string;
 };
 
+export interface ExportData {
+  movements: MovementRow[];
+  year: number;
+  totalIncome: number;
+  totalExpenses: number;
+  balance: number;
+}
+
 const QK = {
   movements: (year: number) => ["movements", year] as const,
 };
