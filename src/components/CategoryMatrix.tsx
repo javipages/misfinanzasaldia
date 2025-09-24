@@ -196,7 +196,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                   items={categories.map((c) => c.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  <table className="w-full">
+                  <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border">
                         <th className="w-6"></th>
@@ -222,7 +222,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                           <td className="p-3 w-8 align-middle">
                             <RowHandle id={category.id} />
                           </td>
-                          <td className="p-3 font-medium text-foreground flex justify-between items-center">
+                          <td className="flex flex-wrap items-center justify-between gap-2 p-3 font-medium text-foreground">
                             {category.name}
                             <Button
                               size="sm"

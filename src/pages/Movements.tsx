@@ -172,8 +172,8 @@ const Movements = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">
             Movimientos Financieros
           </h1>
@@ -181,14 +181,17 @@ const Movements = () => {
             Vista completa de todos tus ingresos y gastos
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           <ImportBudgetDialog onSuccess={handleImportSuccess}>
-            <Button variant="outline">
+            <Button variant="outline" className="w-full sm:w-auto">
               <FileText className="h-4 w-4 mr-2" />
               Importar JSON
             </Button>
           </ImportBudgetDialog>
-          <Button onClick={() => setAddDialogOpen(true)}>
+          <Button
+            onClick={() => setAddDialogOpen(true)}
+            className="w-full sm:w-auto"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Nuevo movimiento
           </Button>
@@ -196,7 +199,7 @@ const Movements = () => {
       </div>
 
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ingresos</CardTitle>

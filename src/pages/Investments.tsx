@@ -266,14 +266,14 @@ const Investments = () => {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
             <h1 className="text-3xl font-bold text-foreground">Inversiones</h1>
             <p className="text-muted-foreground">
               Gestiona tu portafolio de inversiones
             </p>
           </div>
-          <Button onClick={handleAddInvestment}>
+          <Button onClick={handleAddInvestment} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
             Nueva Inversión
           </Button>
@@ -285,21 +285,21 @@ const Investments = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Inversiones</h1>
           <p className="text-muted-foreground">
             Gestiona tu portafolio de inversiones y trackea tus ganancias
           </p>
         </div>
-        <Button onClick={handleAddInvestment}>
+        <Button onClick={handleAddInvestment} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Nueva Inversión
         </Button>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card className="shadow-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -391,7 +391,7 @@ const Investments = () => {
                 items={investments.map((investment) => investment.id)}
                 strategy={verticalListSortingStrategy}
               >
-                <table className="w-full">
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
                       <th className="w-6"></th>
@@ -558,7 +558,7 @@ const Investments = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
                     <th className="text-left p-3 font-semibold text-foreground">

@@ -97,11 +97,11 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
 
   return (
     <div
-      className={`flex items-center justify-between space-x-6 lg:space-x-8 px-2 py-4 ${className}`}
+      className={`flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-2 py-4 ${className}`}
     >
       {/* Page size selector */}
       {showPageSizeSelector && (
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <p className="text-sm font-medium">Filas por página</p>
           <Select
             value={pageSize.toString()}
@@ -130,7 +130,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
       )}
 
       {/* Navigation controls */}
-      <div className="flex items-center space-x-2">
+      <div className="flex flex-wrap items-center gap-2">
         {/* First page */}
         <Button
           variant="outline"
@@ -157,7 +157,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
 
         {/* Page numbers */}
         {totalPages > 1 && (
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center gap-1">
             {pageNumbers.map((page, index) => (
               <React.Fragment key={index}>
                 {page === "..." ? (

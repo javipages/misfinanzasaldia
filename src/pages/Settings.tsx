@@ -38,7 +38,7 @@ function CategoryList({
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex gap-2 mb-4">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row">
           <Input
             placeholder="Nueva categoría"
             value={newName}
@@ -51,6 +51,7 @@ function CategoryList({
               onAdd(trimmed);
               setNewName("");
             }}
+            className="w-full sm:w-auto"
           >
             Añadir
           </Button>
@@ -74,7 +75,7 @@ function CategoryList({
                     />
                   </td>
                   <td className="py-2">
-                    <div className="flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         variant="secondary"
                         onClick={() => onMove(cat.id, "up")}
@@ -193,8 +194,8 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-4 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold">Configuración</h1>
         <div className="text-sm text-muted-foreground">
           {saving ? "Guardando..." : ""}
@@ -227,7 +228,7 @@ export default function Settings() {
           <CardTitle>Activos patrimoniales</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2 mb-4">
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row">
             <Input
               placeholder="Nuevo activo"
               value={newAssetName}
@@ -237,7 +238,7 @@ export default function Settings() {
               value={newAssetType}
               onValueChange={(v) => setNewAssetType(v as AssetType)}
             >
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px]">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -259,6 +260,7 @@ export default function Settings() {
                 setNewAssetName("");
                 setNewAssetType("cuenta_bancaria");
               }}
+              className="w-full sm:w-auto"
             >
               Añadir
             </Button>
@@ -297,7 +299,7 @@ export default function Settings() {
                           })
                         }
                       >
-                        <SelectTrigger className="w-[200px]">
+                        <SelectTrigger className="w-full sm:w-[200px]">
                           <SelectValue placeholder="Tipo" />
                         </SelectTrigger>
                         <SelectContent>
@@ -312,7 +314,7 @@ export default function Settings() {
                       </Select>
                     </td>
                     <td className="py-2">
-                      <div className="flex items-center gap-1">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Button
                           variant="destructive"
                           onClick={() => void deleteAsset.mutateAsync(cat.id)}

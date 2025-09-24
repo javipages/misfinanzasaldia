@@ -260,7 +260,7 @@ Responde ÚNICAMENTE con el JSON válido, sin explicaciones adicionales.`;
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-[min(100vw-2rem,720px)] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
@@ -454,7 +454,7 @@ Responde ÚNICAMENTE con el JSON válido, sin explicaciones adicionales.`;
           )}
         </div>
 
-        <DialogFooter className="flex gap-2">
+        <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={handleClose}>
             {importMutation.isSuccess ? "Cerrar" : "Cancelar"}
           </Button>

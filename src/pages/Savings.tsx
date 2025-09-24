@@ -52,8 +52,8 @@ const Savings = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">
             Gestión de Ahorro
           </h1>
@@ -61,7 +61,7 @@ const Savings = () => {
             Controla tu capacidad de ahorro mensual y anual
           </p>
         </div>
-        <Button className="bg-success hover:bg-success/90">
+        <Button className="bg-success hover:bg-success/90 w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Agregar Ahorro
         </Button>
@@ -78,7 +78,7 @@ const Savings = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm text-muted-foreground">
                   Progreso del objetivo anual
                 </span>
@@ -92,7 +92,7 @@ const Savings = () => {
                   style={{ width: `${Math.min(currentProgress, 100)}%` }}
                 ></div>
               </div>
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                 <span className="text-muted-foreground">
                   €{calculateTotal.toLocaleString()} ahorrado
                 </span>
@@ -112,12 +112,12 @@ const Savings = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-sm text-muted-foreground">
                 Establece un objetivo para medir tu progreso
               </span>
               <Button
-                className="bg-primary hover:bg-primary/90"
+                className="bg-primary hover:bg-primary/90 w-full sm:w-auto"
                 onClick={() => navigate("/goals")}
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -135,7 +135,7 @@ const Savings = () => {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
                   {MONTHS.map((month) => (
@@ -173,7 +173,7 @@ const Savings = () => {
       {/* Savings Insights */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="shadow-card">
-          <CardContent className="p-4 flex items-center gap-3">
+          <CardContent className="p-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <PiggyBank className="h-8 w-8 text-success" />
             <div>
               <div className="text-2xl font-bold text-success">
@@ -186,7 +186,7 @@ const Savings = () => {
           </CardContent>
         </Card>
         <Card className="shadow-card">
-          <CardContent className="p-4 flex items-center gap-3">
+          <CardContent className="p-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <TrendingUp className="h-8 w-8 text-info" />
             <div>
               <div className="text-2xl font-bold text-info">
@@ -199,7 +199,7 @@ const Savings = () => {
           </CardContent>
         </Card>
         <Card className="shadow-card">
-          <CardContent className="p-4 flex items-center gap-3">
+          <CardContent className="p-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <Target className="h-8 w-8 text-primary" />
             <div>
               <div className="text-2xl font-bold text-primary">
@@ -213,7 +213,7 @@ const Savings = () => {
         </Card>
         {savingsGoal ? (
           <Card className="shadow-card">
-            <CardContent className="p-4 flex items-center gap-3">
+            <CardContent className="p-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
               <div className="h-8 w-8 rounded-full bg-warning/20 flex items-center justify-center">
                 <span className="text-warning font-bold">%</span>
               </div>
@@ -229,7 +229,7 @@ const Savings = () => {
           </Card>
         ) : (
           <Card className="shadow-card">
-            <CardContent className="p-4 flex items-center gap-3">
+            <CardContent className="p-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
               <Target className="h-8 w-8 text-primary" />
               <div>
                 <Button
@@ -260,7 +260,7 @@ const Savings = () => {
                 {savingsData.slice(0, 6).map((value, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-2 rounded bg-muted/30"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded bg-muted/30 p-2"
                   >
                     <span className="text-sm text-muted-foreground">
                       {MONTHS[index]}
@@ -277,7 +277,7 @@ const Savings = () => {
                 Proyección Anual
               </h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm text-muted-foreground">
                     Ahorro actual
                   </span>
@@ -285,7 +285,7 @@ const Savings = () => {
                     €{calculateTotal.toLocaleString()}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm text-muted-foreground">
                     Proyección anual
                   </span>
@@ -297,7 +297,7 @@ const Savings = () => {
                   </span>
                 </div>
                 {savingsGoal && (
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-sm text-muted-foreground">
                       Falta para objetivo
                     </span>

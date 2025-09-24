@@ -277,8 +277,8 @@ const Goals = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">
             Objetivos Financieros
           </h1>
@@ -289,14 +289,14 @@ const Goals = () => {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button
-              className="bg-primary hover:bg-primary/90"
+              className="w-full bg-primary hover:bg-primary/90 sm:w-auto"
               onClick={() => openDialog()}
             >
               <Plus className="h-4 w-4 mr-2" />
               Nuevo Objetivo
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="w-full max-w-[min(100vw-2rem,640px)] max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingGoal ? "Editar Objetivo" : "Nuevo Objetivo"}
@@ -385,7 +385,7 @@ const Goals = () => {
                   }
                 />
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <input
                   id="repeat_yearly"
                   type="checkbox"
@@ -399,8 +399,12 @@ const Goals = () => {
                 />
                 <Label htmlFor="repeat_yearly">Repetir cada año</Label>
               </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={closeDialog}>
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeDialog}
+                >
                   Cancelar
                 </Button>
                 <Button type="submit">
@@ -431,7 +435,7 @@ const Goals = () => {
             return (
               <Card key={goal.id} className="shadow-card">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <IconComponent
                       className={`h-6 w-6 ${getColorClass(color)}`}
                     />
@@ -454,7 +458,7 @@ const Goals = () => {
                         style={{ width: `${percentage}%` }}
                       ></div>
                     </div>
-                    <div className="flex justify-between text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>{formatValue(goal, current)}</span>
                       <span>
                         {goal.category === "savings_ratio" ||
@@ -480,7 +484,7 @@ const Goals = () => {
           </p>
           <Button
             onClick={() => openDialog()}
-            className="bg-primary hover:bg-primary/90"
+            className="w-full bg-primary hover:bg-primary/90 sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
             Crear Primer Objetivo
@@ -498,7 +502,7 @@ const Goals = () => {
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
                       <th className="text-left p-3 font-semibold text-foreground">
@@ -539,7 +543,7 @@ const Goals = () => {
                           className="border-b border-border/50 hover:bg-muted/30"
                         >
                           <td className="p-3">
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-3">
                               <IconComponent
                                 className={`h-5 w-5 ${getColorClass(color)}`}
                               />
@@ -560,7 +564,7 @@ const Goals = () => {
                             {formatValue(goal, current)}
                           </td>
                           <td className="p-3 text-center">
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap items-center justify-center gap-2">
                               <div className="flex-1 bg-muted rounded-full h-2">
                                 <div
                                   className={`bg-gradient-to-r ${getBgColorClass(
@@ -614,7 +618,7 @@ const Goals = () => {
                             </span>
                           </td>
                           <td className="p-3 text-center">
-                            <div className="flex justify-center gap-1">
+                            <div className="flex flex-wrap justify-center gap-2">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -660,7 +664,7 @@ const Goals = () => {
                       return (
                         <div
                           key={goal.id}
-                          className="flex items-center justify-between p-3 rounded bg-muted/30"
+                          className="flex flex-wrap items-center justify-between gap-2 rounded bg-muted/30 p-3"
                         >
                           <span className="text-sm text-foreground">
                             {goal.name ||
@@ -694,7 +698,7 @@ const Goals = () => {
                     Resumen de Progreso
                   </h3>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-sm text-muted-foreground">
                         Objetivos completados
                       </span>
@@ -711,7 +715,7 @@ const Goals = () => {
                         / {goals.length}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-sm text-muted-foreground">
                         Progreso promedio
                       </span>
@@ -732,7 +736,7 @@ const Goals = () => {
                         %
                       </span>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-sm text-muted-foreground">
                         Objetivos en riesgo
                       </span>

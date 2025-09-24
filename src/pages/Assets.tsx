@@ -168,13 +168,11 @@ const Assets = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Patrimonio</h1>
-          <p className="text-muted-foreground">
-            Gestiona el balance de tus activos financieros
-          </p>
-        </div>
+      <div className="space-y-1">
+        <h1 className="text-3xl font-bold text-foreground">Patrimonio</h1>
+        <p className="text-muted-foreground">
+          Gestiona el balance de tus activos financieros
+        </p>
       </div>
 
       <div className="overflow-x-auto">
@@ -183,7 +181,7 @@ const Assets = () => {
             items={assetCategories.map((a) => a.id)}
             strategy={verticalListSortingStrategy}
           >
-            <table className="w-full">
+            <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
                   <th className="w-6"></th>
@@ -258,7 +256,7 @@ const Assets = () => {
                               />
                             ) : (
                               <div
-                                className="p-2 rounded cursor-pointer hover:bg-muted/50 text-primary font-medium"
+                                className="p-2 rounded cursor-pointer text-xs font-medium text-primary hover:bg-muted/50 sm:text-sm"
                                 onClick={() => setEditingCell(cellKey)}
                               >
                                 €{value.toLocaleString()}

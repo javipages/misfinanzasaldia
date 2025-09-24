@@ -76,19 +76,22 @@ export function ManageEntriesDialog({
         aria-hidden
       />
       <div className="relative bg-background rounded-md shadow-lg w-full max-w-lg mx-4 p-4 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold">
             {title} · {categoryName} · {MONTHS[month - 1]}
           </h2>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} className="self-end sm:self-auto">
             Cerrar
           </Button>
         </div>
 
         <div className="space-y-3 max-h-[50vh] overflow-auto">
           {local.map((e) => (
-            <div key={e.id} className="grid grid-cols-12 gap-2 items-center">
-              <div className="col-span-4">
+            <div
+              key={e.id}
+              className="grid grid-cols-1 gap-2 md:grid-cols-12 md:items-center"
+            >
+              <div className="md:col-span-4">
                 <Input
                   placeholder="Descripción"
                   value={e.description ?? ""}
@@ -103,7 +106,7 @@ export function ManageEntriesDialog({
                   }
                 />
               </div>
-              <div className="col-span-4">
+              <div className="md:col-span-4">
                 <Input
                   type="number"
                   placeholder="Cantidad"
@@ -119,7 +122,7 @@ export function ManageEntriesDialog({
                   }
                 />
               </div>
-              <div className="col-span-4 flex justify-end gap-2">
+              <div className="flex justify-start gap-2 md:col-span-4 md:justify-end">
                 <Button
                   variant="secondary"
                   onClick={async () => {
@@ -147,15 +150,15 @@ export function ManageEntriesDialog({
         </div>
 
         <div className="border-t pt-3">
-          <div className="grid grid-cols-12 gap-2 items-center">
-            <div className="col-span-4">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-12 md:items-center">
+            <div className="md:col-span-4">
               <Input
                 placeholder="Descripción"
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
               />
             </div>
-            <div className="col-span-4">
+            <div className="md:col-span-4">
               <Input
                 type="number"
                 placeholder="Cantidad"
@@ -163,7 +166,7 @@ export function ManageEntriesDialog({
                 onChange={(e) => setNewAmount(e.target.value)}
               />
             </div>
-            <div className="col-span-4 flex justify-end">
+            <div className="flex justify-start md:col-span-4 md:justify-end">
               <Button
                 onClick={async () => {
                   await onCreate({

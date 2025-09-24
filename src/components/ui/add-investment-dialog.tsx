@@ -163,7 +163,7 @@ export function AddInvestmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-full max-w-[min(100vw-2rem,520px)] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {isEditing
@@ -401,7 +401,7 @@ export function AddInvestmentDialog({
               </div>
             )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="initial_amount">
                 {investmentMode === "create_new"
@@ -458,7 +458,7 @@ export function AddInvestmentDialog({
             />
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancelar
             </Button>

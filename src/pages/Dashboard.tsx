@@ -115,16 +115,16 @@ const Dashboard = () => {
     return (
       <div className="space-y-6">
         {/* Header skeleton */}
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
             <Skeleton className="h-8 w-48 mb-2" />
             <Skeleton className="h-4 w-64" />
           </div>
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-40" />
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-48" />
-            <Skeleton className="h-10 w-24" />
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
+            <Skeleton className="h-10 w-full sm:w-40" />
+            <Skeleton className="h-10 w-full sm:w-32" />
+            <Skeleton className="h-10 w-full sm:w-48" />
+            <Skeleton className="h-10 w-full sm:w-24" />
           </div>
         </div>
 
@@ -133,7 +133,7 @@ const Dashboard = () => {
           {[...Array(4)].map((_, i) => (
             <Card key={i} className="shadow-card">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-2">
                     <Skeleton className="h-4 w-24" />
                     <Skeleton className="h-8 w-32" />
@@ -201,8 +201,8 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header with filters */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">
             Dashboard Financiero
           </h1>
@@ -215,7 +215,7 @@ const Dashboard = () => {
             )}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           <Select
             value={selectedMonth?.toString() || "undefined"}
             onValueChange={(value) =>
@@ -224,7 +224,7 @@ const Dashboard = () => {
               )
             }
           >
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-44">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
@@ -244,6 +244,7 @@ const Dashboard = () => {
             variant={showPreviousYear ? "default" : "outline"}
             size="sm"
             onClick={() => setShowPreviousYear(!showPreviousYear)}
+            className="w-full sm:w-auto"
           >
             <TrendingUp className="h-4 w-4 mr-2" />
             {showPreviousYear ? "Ocultar" : "Comparar"}{" "}
@@ -255,7 +256,7 @@ const Dashboard = () => {
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-6">
         <MetricCard
           title="Total Ingresos"
           value={`${metrics.totalIngresos.toLocaleString()}€`}
@@ -287,7 +288,7 @@ const Dashboard = () => {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
         {/* Monthly Overview with Comparison */}
         <Card className="shadow-card">
           <CardHeader>
@@ -310,7 +311,7 @@ const Dashboard = () => {
               </p>
             )}
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 pr-2 md:pr-4">
             <ChartContainer config={chartConfig}>
               <ComposedChart
                 data={data.monthlyData}
@@ -440,7 +441,10 @@ const Dashboard = () => {
                 ? data.expenseCategories
                 : data.expenseCategories.slice(0, 5)
               ).map((category, index) => (
-                <div key={index} className="flex items-center justify-between">
+                <div
+                  key={index}
+                  className="flex flex-wrap items-center justify-between gap-2"
+                >
                   <div className="flex items-center gap-2">
                     <div
                       className="w-3 h-3 rounded-full"
@@ -481,7 +485,7 @@ const Dashboard = () => {
 
         {/* Year Comparison */}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
         <div>
           <Card className="shadow-card">
             <CardHeader>
@@ -494,7 +498,7 @@ const Dashboard = () => {
                   : `Evolución mensual ${year}`}
               </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-0 pr-3 md:pr-4">
               <ChartContainer
                 config={{
                   patrimonio: {
@@ -557,7 +561,7 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm text-muted-foreground">
                     Tasa de Ahorro
                   </span>
@@ -571,7 +575,7 @@ const Dashboard = () => {
                     %
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm text-muted-foreground">
                     Gastos/Ingresos
                   </span>
@@ -585,7 +589,7 @@ const Dashboard = () => {
                     %
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm text-muted-foreground">
                     Mes con más ahorro
                   </span>
@@ -604,7 +608,7 @@ const Dashboard = () => {
                     º mes
                   </span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="text-sm text-muted-foreground">
                     Promedio mensual
                   </span>
@@ -613,9 +617,6 @@ const Dashboard = () => {
                       metrics.totalIngresos / (selectedMonth ? 1 : 12)
                     ).toLocaleString()}
                     €
-                    {(
-                      metrics.totalIngresos / (selectedMonth ? 1 : 12)
-                    ).toLocaleString()}
                   </span>
                 </div>
               </div>
