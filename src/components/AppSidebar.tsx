@@ -29,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { useEffect } from "react";
 import { useYearStore } from "@/store/year";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSidebar } from "@/components/ui/sidebar";
 
 // Elementos del menú
 
@@ -51,9 +52,16 @@ export function AppSidebar() {
   const hydrate = useYearStore((s) => s.hydrate);
   const setYear = useYearStore((s) => s.setYear);
   const isMobile = useIsMobile();
+  const { setOpenMobile } = useSidebar();
 
   const handleLogout = async () => {
     await signOut();
+  };
+
+  const handleCloseSidebar = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
   };
 
   useEffect(() => {
@@ -90,7 +98,11 @@ export function AppSidebar() {
                     asChild
                     isActive={location.pathname === item.url}
                   >
-                    <Link to={item.url} className="flex items-center gap-2">
+                    <Link
+                      to={item.url}
+                      className="flex items-center gap-2"
+                      onClick={handleCloseSidebar}
+                    >
                       <item.icon className="w-4 h-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -104,7 +116,10 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-4">
         <Button
-          onClick={handleLogout}
+          onClick={() => {
+            handleLogout();
+            handleCloseSidebar();
+          }}
           variant="outline"
           className="w-full flex items-center gap-2"
         >
