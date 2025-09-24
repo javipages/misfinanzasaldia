@@ -315,10 +315,7 @@ Responde ÚNICAMENTE con el JSON válido, sin explicaciones adicionales.`;
                 <Bot className="h-4 w-4 text-blue-500" />
                 <h3 className="font-semibold text-sm">Generar JSON con IA</h3>
               </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                Usa ChatGPT, Gemini u otro LLM para convertir tus extractos
-                bancarios en JSON.
-              </p>
+
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground mb-3">
                   Usa ChatGPT, Gemini u otro LLM para convertir tus extractos
