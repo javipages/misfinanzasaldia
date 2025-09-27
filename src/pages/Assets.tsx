@@ -3,7 +3,15 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Wallet, TrendingUp, DollarSign, GripVertical } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Wallet,
+  TrendingUp,
+  DollarSign,
+  GripVertical,
+  Table,
+  Grid3X3,
+} from "lucide-react";
 import { useAssets, type AssetItem } from "@/hooks/use-assets";
 import {
   DndContext,
@@ -22,6 +30,7 @@ import { MONTHS } from "@/utils/constants";
 
 const Assets = () => {
   const [editingCell, setEditingCell] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
 
   const { assets, swapOrder, updateAssetValue } = useAssets();
 
@@ -174,120 +183,261 @@ const Assets = () => {
           Gestiona el balance de tus activos financieros
         </p>
       </div>
+      <div className="flex items-center gap-2">
+        <Button
+          variant={viewMode === "cards" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setViewMode("cards")}
+          className="flex items-center gap-2"
+        >
+          <Grid3X3 className="h-4 w-4" />
+          Cajas
+        </Button>
+        <Button
+          variant={viewMode === "table" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setViewMode("table")}
+          className="flex items-center gap-2"
+        >
+          <Table className="h-4 w-4" />
+          Tabla
+        </Button>
+      </div>
 
-      <div className="overflow-x-auto">
-        <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-          <SortableContext
-            items={assetCategories.map((a) => a.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="w-6"></th>
-                  <th className="text-left p-3 font-semibold text-foreground min-w-[150px]">
-                    Activo
-                  </th>
-                  <th className="text-left p-3 font-semibold text-foreground min-w-[80px]">
-                    Tipo
-                  </th>
-                  {MONTHS.map((month) => (
-                    <th
-                      key={month}
-                      className="text-center p-3 font-semibold text-foreground min-w-[80px]"
-                    >
-                      {month}
-                    </th>
+      {/* Vista de tarjetas */}
+      {viewMode === "cards" && (
+        <div className="space-y-4">
+          <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+            <SortableContext
+              items={assetCategories.map((a) => a.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {assetCategories.map((category) => {
+                const typeConfig = getTypeConfig(category.type);
+                const IconComponent = category.icon;
+
+                return (
+                  <SortableRow key={category.id} id={category.id}>
+                    <Card className="shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="flex flex-col space-y-3">
+                          {/* Header con nombre, tipo y drag handle */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <RowHandle id={category.id} />
+                              <IconComponent className="h-5 w-5 text-muted-foreground" />
+                              <div className="font-medium text-foreground">
+                                {category.name}
+                              </div>
+                            </div>
+                            <span
+                              className={`px-2 py-1 text-xs rounded-full font-medium ${typeConfig.color}`}
+                            >
+                              {typeConfig.label}
+                            </span>
+                          </div>
+
+                          {/* Valores mensuales */}
+                          <div className="grid grid-cols-3 gap-2">
+                            {category.data.map((value, monthIndex) => {
+                              const cellKey = `${category.id}-${monthIndex}`;
+                              const isEditing = editingCell === cellKey;
+                              const monthName = MONTHS[monthIndex];
+
+                              return (
+                                <div key={monthIndex} className="space-y-1">
+                                  <div className="text-xs font-medium text-muted-foreground text-center">
+                                    {monthName}
+                                  </div>
+                                  {isEditing ? (
+                                    <Input
+                                      type="number"
+                                      defaultValue={value}
+                                      className="w-full h-10 text-center text-sm"
+                                      autoFocus
+                                      onBlur={(e) =>
+                                        handleCellEdit(
+                                          category.id,
+                                          monthIndex,
+                                          e.target.value
+                                        )
+                                      }
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          handleCellEdit(
+                                            category.id,
+                                            monthIndex,
+                                            e.currentTarget.value
+                                          );
+                                        }
+                                        if (e.key === "Escape") {
+                                          setEditingCell(null);
+                                        }
+                                      }}
+                                    />
+                                  ) : (
+                                    <div
+                                      className="p-3 rounded-lg bg-muted/50 cursor-pointer text-sm font-medium text-primary hover:bg-muted/70 text-center transition-colors"
+                                      onClick={() => setEditingCell(cellKey)}
+                                    >
+                                      €{value.toLocaleString()}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </SortableRow>
+                );
+              })}
+            </SortableContext>
+          </DndContext>
+
+          {/* Totales en tarjetas */}
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="p-4">
+              <div className="text-center">
+                <div className="text-lg font-bold text-primary mb-2">
+                  TOTALES
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {MONTHS.map((_, monthIndex) => (
+                    <div key={monthIndex} className="text-center">
+                      <div className="text-xs font-medium text-muted-foreground mb-1">
+                        {MONTHS[monthIndex]}
+                      </div>
+                      <div className="text-sm font-bold text-primary">
+                        €{calculateColumnTotal(monthIndex).toLocaleString()}
+                      </div>
+                    </div>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {assetCategories.map((category) => {
-                  const typeConfig = getTypeConfig(category.type);
-                  const IconComponent = category.icon;
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-                  return (
-                    <SortableRow key={category.id} id={category.id}>
-                      <td className="p-3 w-8 align-middle">
-                        <RowHandle id={category.id} />
-                      </td>
-                      <td className="p-3 font-medium text-foreground flex items-center gap-2">
-                        <IconComponent className="h-4 w-4" />
-                        {category.name}
-                      </td>
-                      <td className="p-3">
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full font-medium ${typeConfig.color}`}
-                        >
-                          {typeConfig.label}
-                        </span>
-                      </td>
-                      {category.data.map((value, monthIndex) => {
-                        const cellKey = `${category.id}-${monthIndex}`;
-                        const isEditing = editingCell === cellKey;
+      {/* Vista de tabla */}
+      {viewMode === "table" && (
+        <div className="overflow-x-auto">
+          <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+            <SortableContext
+              items={assetCategories.map((a) => a.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="w-6"></th>
+                    <th className="text-left p-3 font-semibold text-foreground min-w-[150px]">
+                      Activo
+                    </th>
+                    <th className="text-left p-3 font-semibold text-foreground min-w-[80px]">
+                      Tipo
+                    </th>
+                    {MONTHS.map((month) => (
+                      <th
+                        key={month}
+                        className="text-center p-3 font-semibold text-foreground min-w-[80px]"
+                      >
+                        {month}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {assetCategories.map((category) => {
+                    const typeConfig = getTypeConfig(category.type);
+                    const IconComponent = category.icon;
 
-                        return (
-                          <td key={monthIndex} className="p-1 text-center">
-                            {isEditing ? (
-                              <Input
-                                type="number"
-                                defaultValue={value}
-                                className="w-16 h-8 text-center"
-                                autoFocus
-                                onBlur={(e) =>
-                                  handleCellEdit(
-                                    category.id,
-                                    monthIndex,
-                                    e.target.value
-                                  )
-                                }
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
+                    return (
+                      <SortableRow key={category.id} id={category.id}>
+                        <td className="p-3 w-8 align-middle">
+                          <RowHandle id={category.id} />
+                        </td>
+                        <td className="p-3 font-medium text-foreground flex items-center gap-2">
+                          <IconComponent className="h-4 w-4" />
+                          {category.name}
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full font-medium ${typeConfig.color}`}
+                          >
+                            {typeConfig.label}
+                          </span>
+                        </td>
+                        {category.data.map((value, monthIndex) => {
+                          const cellKey = `${category.id}-${monthIndex}`;
+                          const isEditing = editingCell === cellKey;
+
+                          return (
+                            <td key={monthIndex} className="p-1 text-center">
+                              {isEditing ? (
+                                <Input
+                                  type="number"
+                                  defaultValue={value}
+                                  className="w-16 h-8 text-center"
+                                  autoFocus
+                                  onBlur={(e) =>
                                     handleCellEdit(
                                       category.id,
                                       monthIndex,
-                                      e.currentTarget.value
-                                    );
+                                      e.target.value
+                                    )
                                   }
-                                  if (e.key === "Escape") {
-                                    setEditingCell(null);
-                                  }
-                                }}
-                              />
-                            ) : (
-                              <div
-                                className="p-2 rounded cursor-pointer text-xs font-medium text-primary hover:bg-muted/50 sm:text-sm"
-                                onClick={() => setEditingCell(cellKey)}
-                              >
-                                €{value.toLocaleString()}
-                              </div>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </SortableRow>
-                  );
-                })}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      handleCellEdit(
+                                        category.id,
+                                        monthIndex,
+                                        e.currentTarget.value
+                                      );
+                                    }
+                                    if (e.key === "Escape") {
+                                      setEditingCell(null);
+                                    }
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  className="p-2 rounded cursor-pointer text-xs font-medium text-primary hover:bg-muted/50 sm:text-sm"
+                                  onClick={() => setEditingCell(cellKey)}
+                                >
+                                  €{value.toLocaleString()}
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </SortableRow>
+                    );
+                  })}
 
-                <tr className="border-t-2 border-primary/20 bg-muted/20">
-                  <td className="p-3 font-bold text-primary" colSpan={3}>
-                    TOTAL
-                  </td>
-                  {MONTHS.map((_, monthIndex) => (
-                    <td
-                      key={monthIndex}
-                      className="p-3 text-center font-bold text-primary"
-                    >
-                      €{calculateColumnTotal(monthIndex).toLocaleString()}
+                  <tr className="border-t-2 border-primary/20 bg-muted/20">
+                    <td className="p-3 font-bold text-primary" colSpan={3}>
+                      TOTAL
                     </td>
-                  ))}
-                  {/* No global total cell */}
-                </tr>
-              </tbody>
-            </table>
-          </SortableContext>
-        </DndContext>
-      </div>
+                    {MONTHS.map((_, monthIndex) => (
+                      <td
+                        key={monthIndex}
+                        className="p-3 text-center font-bold text-primary"
+                      >
+                        €{calculateColumnTotal(monthIndex).toLocaleString()}
+                      </td>
+                    ))}
+                    {/* No global total cell */}
+                  </tr>
+                </tbody>
+              </table>
+            </SortableContext>
+          </DndContext>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="shadow-card">
           <CardContent className="p-4">
