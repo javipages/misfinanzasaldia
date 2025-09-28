@@ -15,13 +15,15 @@ const ProtectedRoute = () => {
   const location = useLocation();
   const { onboardingCompleted, onboardingLoading, hasHydrated, hydrate } =
     useUserStore();
+
   useEffect(() => {
     if (session) {
       hydrate();
     }
   }, [session, hydrate]);
 
-  if (authLoading || onboardingLoading || !hasHydrated) {
+  // If auth is still loading, show loading state
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingState />
@@ -29,8 +31,18 @@ const ProtectedRoute = () => {
     );
   }
 
+  // If no session, redirect to auth immediately (don't wait for hydration)
   if (!session) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // If session exists but user data is still loading, show loading state
+  if (onboardingLoading || !hasHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingState />
+      </div>
+    );
   }
 
   // If user hasn't completed onboarding and is not already on onboarding page
