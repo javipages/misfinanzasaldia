@@ -16,6 +16,8 @@ export type UserData = {
   onboarding_step: number | null;
   onboarding_completed_at?: string | null;
   email_notifications_enabled: boolean | null;
+  tour_completed?: boolean | null;
+  welcome_shown?: boolean | null;
   user_profile_setup: UserProfileSetup | null;
   created_at: string;
   updated_at: string;
@@ -58,6 +60,7 @@ export async function getUserData(): Promise<UserData | null> {
           onboarding_completed: false,
           onboarding_step: 0,
           email_notifications_enabled: true,
+          tour_completed: false,
           user_profile_setup: {},
         },
       ])
@@ -148,6 +151,24 @@ export async function updateUserEmailNotifications(
   const { data, error } = await supabase
     .from(TABLE_USER)
     .update({ email_notifications_enabled: emailNotificationsEnabled })
+    .eq("user_id", userId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data! as UserData;
+}
+
+export async function updateUserTourCompleted(
+  tourCompleted: boolean
+): Promise<UserData> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("User not authenticated");
+
+  const { data, error } = await supabase
+    .from(TABLE_USER)
+    .update({ tour_completed: tourCompleted })
     .eq("user_id", userId)
     .select()
     .single();

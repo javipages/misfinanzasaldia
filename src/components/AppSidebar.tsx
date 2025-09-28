@@ -9,6 +9,7 @@ import {
   LogOut,
   Settings,
   ArrowUpDown,
+  HelpCircle,
 } from "lucide-react";
 import { useAuth } from "@/contexts/useAuth";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,11 @@ const items = [
   { title: "Configuración", url: "/settings", icon: Settings },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  onStartTour?: () => void;
+}
+
+export function AppSidebar({ onStartTour }: AppSidebarProps = {}) {
   const { signOut } = useAuth();
   const location = useLocation();
   const year = useUserStore((s) => s.year);
@@ -109,6 +114,19 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4">
+        {onStartTour && (
+          <Button
+            onClick={() => {
+              onStartTour();
+              handleCloseSidebar();
+            }}
+            variant="ghost"
+            className="w-full flex items-center gap-2 mb-2"
+          >
+            <HelpCircle className="w-4 h-4" />
+            Tour Guiado
+          </Button>
+        )}
         <Button
           onClick={() => {
             handleLogout();

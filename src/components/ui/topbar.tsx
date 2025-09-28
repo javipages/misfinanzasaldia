@@ -1,4 +1,4 @@
-import { PanelLeftIcon, Grid3X3, Table } from "lucide-react";
+import { PanelLeftIcon, Grid3X3, Table, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUserStore } from "@/store/user";
@@ -7,7 +7,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useViewMode } from "@/store/viewModeStore";
 import { useLocation } from "react-router-dom";
 
-export function Topbar() {
+interface TopbarProps {
+  onStartTour?: () => void;
+}
+
+export function Topbar({ onStartTour }: TopbarProps = {}) {
   const isMobile = useIsMobile();
   const year = useUserStore((s) => s.year);
   const setYear = useUserStore((s) => s.setYear);
@@ -45,6 +49,17 @@ export function Topbar() {
           className="w-24"
         />
         <span className="text-sm text-muted-foreground">Año</span>
+        {onStartTour && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onStartTour}
+            className="ml-2"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span className="sr-only">Tour guiado</span>
+          </Button>
+        )}
       </div>
 
       {(location.pathname === "/movements" ||

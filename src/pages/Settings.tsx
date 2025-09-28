@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useSettings } from "@/hooks/use-settings";
+import { HelpCircle, RotateCcw } from "lucide-react";
+import {
+  getUserData,
+  updateUserTourCompleted,
+} from "@/integrations/supabase/preferences";
 import {
   Select,
   SelectContent,
@@ -145,6 +150,8 @@ export default function Settings() {
     id: null,
     scope: null,
   });
+  const [tourCompleted, setTourCompleted] = useState<boolean | null>(null);
+  const [isResettingTour, setIsResettingTour] = useState(false);
 
   const sortedIncome = income;
   const sortedExpense = expense;
@@ -153,6 +160,33 @@ export default function Settings() {
   const [newAssetName, setNewAssetName] = useState("");
   const [newAssetType, setNewAssetType] =
     useState<AssetType>("cuenta_bancaria");
+
+  // Load tour status on component mount
+  useEffect(() => {
+    const loadTourStatus = async () => {
+      try {
+        const userData = await getUserData();
+        setTourCompleted(userData?.tour_completed || false);
+      } catch (error) {
+        console.error("Error loading tour status:", error);
+      }
+    };
+    loadTourStatus();
+  }, []);
+
+  const handleResetTour = async () => {
+    setIsResettingTour(true);
+    try {
+      await updateUserTourCompleted(false);
+      setTourCompleted(false);
+      // Trigger tour restart by dispatching a custom event
+      window.dispatchEvent(new CustomEvent("restart-tour"));
+    } catch (error) {
+      console.error("Error resetting tour:", error);
+    } finally {
+      setIsResettingTour(false);
+    }
+  };
 
   if (loading) {
     return <div className="p-4">Cargando...</div>;
@@ -330,6 +364,53 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      <Separator />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <HelpCircle className="w-5 h-5" />
+            Tour Guiado
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Estado del tour</p>
+                <p className="text-xs text-muted-foreground">
+                  {tourCompleted
+                    ? "El tour guiado ya ha sido completado"
+                    : "El tour guiado está disponible"}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {tourCompleted && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetTour}
+                    disabled={isResettingTour}
+                    className="flex items-center gap-2"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    {isResettingTour ? "Reiniciando..." : "Reiniciar Tour"}
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground bg-blue-50 p-3 rounded-lg border border-blue-200">
+              <p>
+                El tour guiado te ayudará a conocer las funcionalidades
+                principales de la aplicación. Se mostrará automáticamente
+                después de completar el onboarding inicial.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <ConfirmDialog
         open={confirm.open}
         title="Eliminar categoría"

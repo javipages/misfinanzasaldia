@@ -374,6 +374,7 @@ export type Database = {
           onboarding_completed_at: string | null
           onboarding_step: number | null
           selected_year: number
+          tour_completed: boolean | null
           updated_at: string
           user_id: string
           user_profile_setup: Json | null
@@ -386,6 +387,7 @@ export type Database = {
           onboarding_completed_at?: string | null
           onboarding_step?: number | null
           selected_year?: number
+          tour_completed?: boolean | null
           updated_at?: string
           user_id: string
           user_profile_setup?: Json | null
@@ -398,6 +400,7 @@ export type Database = {
           onboarding_completed_at?: string | null
           onboarding_step?: number | null
           selected_year?: number
+          tour_completed?: boolean | null
           updated_at?: string
           user_id?: string
           user_profile_setup?: Json | null
