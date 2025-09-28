@@ -21,6 +21,15 @@ export const Tour = ({ isVisible, onClose, autoStart = false }: TourProps) => {
         onDestroyStarted: () => {
           onClose();
         },
+        // Personalizar textos en español
+        nextBtnText: "Siguiente",
+        prevBtnText: "Anterior",
+        doneBtnText: "Finalizar",
+        // Aplicar clase CSS personalizada
+        popoverClass: "custom-driver-popover",
+        // Opciones adicionales para mejor experiencia
+        animate: true,
+        allowClose: true,
       });
 
       if (autoStart) {
