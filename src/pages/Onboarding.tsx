@@ -11,6 +11,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { X } from "lucide-react";
 import {
   CheckCircle,
   ArrowRight,
@@ -119,6 +121,27 @@ const Onboarding = () => {
     }));
   };
 
+  const addCustomIncomeCategory = (category: string) => {
+    setUserProfile((prev) => ({
+      ...prev,
+      incomeCategories: [...prev.incomeCategories, category],
+    }));
+  };
+
+  const addCustomExpenseCategory = (category: string) => {
+    setUserProfile((prev) => ({
+      ...prev,
+      expenseCategories: [...prev.expenseCategories, category],
+    }));
+  };
+
+  const addCustomAssetCategory = (category: string) => {
+    setUserProfile((prev) => ({
+      ...prev,
+      assetCategories: [...prev.assetCategories, category],
+    }));
+  };
+
   const defaultIncomeCategories = [
     "Salario",
     "Freelance",
@@ -152,10 +175,111 @@ const Onboarding = () => {
     asset: userProfile.assetCategories,
   };
 
-  const totalCategories =
-    selectedCategories.income.length +
-    selectedCategories.expense.length +
-    selectedCategories.asset.length;
+  // Componente para categorías con input y layout mejorado
+  const CategorySelector = ({
+    availableCategories,
+    selectedCategories,
+    onToggle,
+    onAddCustom,
+  }: {
+    availableCategories: string[];
+    selectedCategories: string[];
+    onToggle: (category: string) => void;
+    onAddCustom: (category: string) => void;
+  }) => {
+    const [newCategory, setNewCategory] = useState("");
+
+    const handleAddCategory = () => {
+      if (
+        newCategory.trim() &&
+        !selectedCategories.includes(newCategory.trim())
+      ) {
+        onAddCustom(newCategory.trim());
+        setNewCategory("");
+      }
+    };
+
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        handleAddCategory();
+      }
+    };
+
+    const unselectedCategories = availableCategories.filter(
+      (cat) => !selectedCategories.includes(cat)
+    );
+
+    return (
+      <div className="space-y-6">
+        {/* Categorías seleccionadas */}
+        {selectedCategories.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-muted-foreground">
+              Categorías seleccionadas:
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {selectedCategories.map((category) => (
+                <Badge
+                  key={category}
+                  variant="secondary"
+                  className="flex items-center gap-1 px-3 py-1 text-sm"
+                >
+                  {category}
+                  <button
+                    onClick={() => onToggle(category)}
+                    className="ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Input para añadir categorías personalizadas */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground">
+            Añadir categoría personalizada:
+          </h4>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Escribe una categoría..."
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="flex-1"
+            />
+            <Button
+              onClick={handleAddCategory}
+              disabled={!newCategory.trim()}
+              size="sm"
+            >
+              Añadir
+            </Button>
+          </div>
+        </div>
+
+        {/* Categorías disponibles */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground">
+            Categorías disponibles:
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {unselectedCategories.map((category) => (
+              <button
+                key={category}
+                onClick={() => onToggle(category)}
+                className="text-left p-3 border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors text-sm"
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const steps: OnboardingStep[] = [
     {
@@ -178,29 +302,6 @@ const Onboarding = () => {
               </p>
             </div>
           </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="email-notifications"
-                checked={userProfile.emailNotifications}
-                onCheckedChange={(checked) =>
-                  setUserProfile((prev) => ({
-                    ...prev,
-                    emailNotifications: !!checked,
-                  }))
-                }
-              />
-              <Label
-                htmlFor="email-notifications"
-                className="flex items-center gap-2"
-              >
-                <Mail className="w-4 h-4" />
-                Recibir notificaciones por correo sobre novedades y consejos
-                financieros
-              </Label>
-            </div>
-          </div>
         </div>
       ),
     },
@@ -210,25 +311,12 @@ const Onboarding = () => {
       description: "Selecciona las categorías de ingresos que más usas",
       icon: <TrendingUp className="w-8 h-8 text-green-500" />,
       component: (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-3">
-            {defaultIncomeCategories.map((category) => (
-              <div
-                key={category}
-                className="flex items-center space-x-2 p-3 border rounded-lg"
-              >
-                <Checkbox
-                  id={`income-${category}`}
-                  checked={userProfile.incomeCategories.includes(category)}
-                  onCheckedChange={() => toggleIncomeCategory(category)}
-                />
-                <Label htmlFor={`income-${category}`} className="flex-1">
-                  {category}
-                </Label>
-              </div>
-            ))}
-          </div>
-        </div>
+        <CategorySelector
+          availableCategories={defaultIncomeCategories}
+          selectedCategories={userProfile.incomeCategories}
+          onToggle={toggleIncomeCategory}
+          onAddCustom={addCustomIncomeCategory}
+        />
       ),
     },
     {
@@ -237,25 +325,12 @@ const Onboarding = () => {
       description: "Selecciona las categorías de gastos que más usas",
       icon: <Wallet className="w-8 h-8 text-red-500" />,
       component: (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-3">
-            {defaultExpenseCategories.map((category) => (
-              <div
-                key={category}
-                className="flex items-center space-x-2 p-3 border rounded-lg"
-              >
-                <Checkbox
-                  id={`expense-${category}`}
-                  checked={userProfile.expenseCategories.includes(category)}
-                  onCheckedChange={() => toggleExpenseCategory(category)}
-                />
-                <Label htmlFor={`expense-${category}`} className="flex-1">
-                  {category}
-                </Label>
-              </div>
-            ))}
-          </div>
-        </div>
+        <CategorySelector
+          availableCategories={defaultExpenseCategories}
+          selectedCategories={userProfile.expenseCategories}
+          onToggle={toggleExpenseCategory}
+          onAddCustom={addCustomExpenseCategory}
+        />
       ),
     },
     {
@@ -264,25 +339,12 @@ const Onboarding = () => {
       description: "Selecciona los tipos de activos que posees",
       icon: <PiggyBank className="w-8 h-8 text-purple-500" />,
       component: (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-3">
-            {defaultAssetCategories.map((category) => (
-              <div
-                key={category}
-                className="flex items-center space-x-2 p-3 border rounded-lg"
-              >
-                <Checkbox
-                  id={`asset-${category}`}
-                  checked={userProfile.assetCategories.includes(category)}
-                  onCheckedChange={() => toggleAssetCategory(category)}
-                />
-                <Label htmlFor={`asset-${category}`} className="flex-1">
-                  {category}
-                </Label>
-              </div>
-            ))}
-          </div>
-        </div>
+        <CategorySelector
+          availableCategories={defaultAssetCategories}
+          selectedCategories={userProfile.assetCategories}
+          onToggle={toggleAssetCategory}
+          onAddCustom={addCustomAssetCategory}
+        />
       ),
     },
     {
@@ -293,21 +355,6 @@ const Onboarding = () => {
       icon: <Sparkles className="w-8 h-8 text-green-500" />,
       component: (
         <div className="space-y-6">
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-              <Sparkles className="w-8 h-8 text-green-600" />
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-green-600">
-                ¡Bienvenido a tu gestor financiero!
-              </h3>
-              <p className="text-muted-foreground">
-                Has completado la configuración inicial. Tu aplicación está
-                lista para ayudarte a controlar tus finanzas.
-              </p>
-            </div>
-          </div>
-
           {/* Resumen de configuración */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
@@ -372,24 +419,27 @@ const Onboarding = () => {
             </div>
           </div>
 
-          {/* Estadísticas rápidas */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border">
-            <div className="text-center space-y-2">
-              <div className="flex items-center justify-center gap-2 text-blue-600">
-                <CheckCircle className="w-5 h-5" />
-                <span className="font-medium">Configuración completada</span>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Has configurado {totalCategories} categorías personalizadas para
-                tu gestión financiera
-              </div>
-              <div className="mt-2">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {userProfile.emailNotifications
-                    ? "Notificaciones activadas"
-                    : "Notificaciones desactivadas"}
-                </span>
-              </div>
+          {/* Configuración de notificaciones */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="email-notifications-final"
+                checked={userProfile.emailNotifications}
+                onCheckedChange={(checked) =>
+                  setUserProfile((prev) => ({
+                    ...prev,
+                    emailNotifications: !!checked,
+                  }))
+                }
+              />
+              <Label
+                htmlFor="email-notifications-final"
+                className="flex items-center gap-2 flex-1"
+              >
+                <Mail className="w-4 h-4 text-blue-600" />
+                Recibir notificaciones por correo sobre novedades y consejos
+                financieros
+              </Label>
             </div>
           </div>
         </div>
