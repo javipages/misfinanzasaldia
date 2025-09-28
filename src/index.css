@@ -177,7 +177,7 @@
 
 /* Highlight para elementos destacados */
 .driver-highlighted-element {
-  @apply ring-4 ring-blue-400 ring-opacity-50 rounded-lg;
+  @apply ring-4 ring-blue-400/50 rounded-lg;
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
   transition: all 0.3s ease;
 }
