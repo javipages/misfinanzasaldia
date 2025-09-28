@@ -82,7 +82,15 @@ const Assets = () => {
     );
   }
 
-  function SortableRow({ id, children }: { id: string; children: ReactNode }) {
+  function SortableRow({
+    id,
+    children,
+    isTableRow = false,
+  }: {
+    id: string;
+    children: ReactNode;
+    isTableRow?: boolean;
+  }) {
     const { setNodeRef, transform, transition, isDragging } = useSortable({
       id,
     });
@@ -91,15 +99,24 @@ const Assets = () => {
       transition,
       opacity: isDragging ? 0.6 : 1,
     };
+
+    if (isTableRow) {
+      return (
+        <tr
+          ref={setNodeRef}
+          style={style}
+          id={id}
+          className="border-b border-border/50 hover:bg-muted/30"
+        >
+          {children}
+        </tr>
+      );
+    }
+
     return (
-      <tr
-        ref={setNodeRef}
-        style={style}
-        id={id}
-        className="border-b border-border/50 hover:bg-muted/30"
-      >
+      <div ref={setNodeRef} style={style} id={id} className="w-full">
         {children}
-      </tr>
+      </div>
     );
   }
 
@@ -190,9 +207,13 @@ const Assets = () => {
                 const IconComponent = category.icon;
 
                 return (
-                  <SortableRow key={category.id} id={category.id}>
-                    <Card className="shadow-sm">
-                      <CardContent className="p-4">
+                  <SortableRow
+                    key={category.id}
+                    id={category.id}
+                    isTableRow={false}
+                  >
+                    <Card className="shadow-sm w-full">
+                      <CardContent className="p-4 ">
                         <div className="flex flex-col space-y-3">
                           {/* Header con nombre, tipo y drag handle */}
                           <div className="flex items-center justify-between">
@@ -270,7 +291,7 @@ const Assets = () => {
           </DndContext>
 
           {/* Totales en tarjetas */}
-          <Card className="bg-primary/5 border-primary/20">
+          <Card className="bg-primary/5 border-primary/20 w-full">
             <CardContent className="p-4">
               <div className="text-center">
                 <div className="text-lg font-bold text-primary mb-2">
@@ -328,7 +349,11 @@ const Assets = () => {
                     const IconComponent = category.icon;
 
                     return (
-                      <SortableRow key={category.id} id={category.id}>
+                      <SortableRow
+                        key={category.id}
+                        id={category.id}
+                        isTableRow={true}
+                      >
                         <td className="p-3 w-8 align-middle">
                           <RowHandle id={category.id} />
                         </td>

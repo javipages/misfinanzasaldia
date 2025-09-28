@@ -9,10 +9,8 @@ export function Layout() {
       <AppSidebar />
       <SidebarInset>
         <Topbar />
-        <div className="flex-1">
-          <main className="p-4 md:p-6">
-            <Outlet />
-          </main>
+        <div className="flex-1 p-4 md:p-6">
+          <Outlet />
         </div>
       </SidebarInset>
     </SidebarProvider>

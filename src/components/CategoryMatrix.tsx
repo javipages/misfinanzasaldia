@@ -82,7 +82,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
       return (
         <button
           aria-label="Mover"
-          className="cursor-grab px-2"
+          className="cursor-grab px-1"
           {...attributes}
           {...listeners}
         >
@@ -199,7 +199,6 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border">
-                        <th className="w-6"></th>
                         <th className="text-left p-3 font-semibold text-foreground min-w-[150px]">
                           Categoría
                         </th>
@@ -219,14 +218,13 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                     <tbody>
                       {categories.map((category, rowIdx) => (
                         <SortableRow key={category.id} id={category.id}>
-                          <td className="p-3 w-8 align-middle">
+                          <td className="flex items-center gap-2 p-3 font-medium text-foreground">
                             <RowHandle id={category.id} />
-                          </td>
-                          <td className="flex flex-wrap items-center justify-between gap-2 p-3 font-medium text-foreground">
-                            {category.name}
+                            <span className="flex-1">{category.name}</span>
                             <Button
                               size="sm"
                               variant="outline"
+                              className="shrink-0 hidden md:inline-flex"
                               onClick={() => {
                                 setPreset({
                                   categoryId: category.id,
@@ -264,7 +262,6 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                       ))}
                       <tr className="border-t-2 bg-muted/20">
                         <td className="p-3 font-bold">TOTAL</td>
-                        <td />
                         {MONTHS.map((_, monthIndex) => (
                           <td
                             key={monthIndex}

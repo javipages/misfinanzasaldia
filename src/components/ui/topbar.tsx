@@ -5,6 +5,7 @@ import { useUserStore } from "@/store/user";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useViewMode } from "@/store/viewModeStore";
+import { useLocation } from "react-router-dom";
 
 export function Topbar() {
   const isMobile = useIsMobile();
@@ -12,6 +13,7 @@ export function Topbar() {
   const setYear = useUserStore((s) => s.setYear);
   const { toggleSidebar } = useSidebar();
   const { viewMode, setViewMode } = useViewMode();
+  const location = useLocation();
 
   // No mostrar en desktop
   if (!isMobile) {
@@ -45,24 +47,27 @@ export function Topbar() {
         <span className="text-sm text-muted-foreground">Año</span>
       </div>
 
-      <div className="flex items-center gap-1">
-        <Button
-          variant={viewMode === "cards" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setViewMode("cards")}
-          className="h-8 px-2"
-        >
-          <Grid3X3 className="h-4 w-4" />
-        </Button>
-        <Button
-          variant={viewMode === "table" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setViewMode("table")}
-          className="h-8 px-2"
-        >
-          <Table className="h-4 w-4" />
-        </Button>
-      </div>
+      {(location.pathname === "/movements" ||
+        location.pathname === "/assets") && (
+        <div className="flex items-center gap-1">
+          <Button
+            variant={viewMode === "cards" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("cards")}
+            className="h-8 px-2"
+          >
+            <Grid3X3 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === "table" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("table")}
+            className="h-8 px-2"
+          >
+            <Table className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
