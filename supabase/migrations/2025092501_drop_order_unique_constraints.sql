@@ -9,5 +9,5 @@ drop constraint if exists income_categories_order_unique_per_user;
 alter table public.expense_categories
 drop constraint if exists expense_categories_order_unique_per_user;
 
--- Note: The indexes on (user_id, display_order) are still useful for performance
--- and will be kept as they don't prevent the reordering operations
+alter table public.asset_categories
+drop constraint if exists asset_categories_order_unique_per_user;
