@@ -1,10 +1,10 @@
 import { useMemo } from "react";
 import { useMovements, ExportData } from "@/hooks/use-movements";
 import { exportData as exportToFile, ExportFormat } from "@/utils/export";
-import { useYearStore } from "@/store/year";
+import { useUserStore } from "@/store/user";
 
 export function useExport() {
-  const year = useYearStore((s) => s.year);
+  const year = useUserStore((s) => s.year);
   const { movements, isLoading } = useMovements(year);
 
   const movementExportData: ExportData | null = useMemo(() => {

@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import Onboarding from "@/pages/Onboarding";
 import { Layout } from "@/components/Layout";
 import Auth from "@/pages/Auth";
 import Index from "@/pages/Index";
@@ -17,6 +18,7 @@ import Investments from "@/pages/Investments";
 import Savings from "@/pages/Savings";
 import Goals from "@/pages/Goals";
 import Settings from "@/pages/Settings";
+import PublicRoute from "@/components/PublicRoute";
 
 function App() {
   return (
@@ -24,10 +26,19 @@ function App() {
       <Router>
         <Routes>
           {/* Ruta de autenticación (no protegida) */}
-          <Route path="/auth" element={<Auth />} />
+          {/* Rutas públicas - solo accesibles sin sesión */}
+          <Route
+            path="/auth"
+            element={
+              <PublicRoute>
+                <Auth />
+              </PublicRoute>
+            }
+          />
 
           {/* Rutas protegidas con layout y sidebar */}
           <Route path="/" element={<ProtectedRoute />}>
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route element={<Layout />}>
               <Route index element={<Index />} />
               <Route path="/movements" element={<Movements />} />

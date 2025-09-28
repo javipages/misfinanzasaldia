@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useYearStore } from "@/store/year";
+import { useUserStore } from "@/store/user";
 import {
   listIncomeEntries,
   listExpenseEntries,
@@ -68,7 +68,7 @@ const CHART_COLORS = [
 ];
 
 export function useDashboardData(selectedMonth?: number) {
-  const year = useYearStore((s) => s.year);
+  const year = useUserStore((s) => s.year);
   const previousYear = year - 1;
 
   // Get current year assets

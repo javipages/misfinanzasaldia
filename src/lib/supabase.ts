@@ -366,24 +366,42 @@ export type Database = {
           },
         ]
       }
-      user_preferences: {
+      user_info: {
         Row: {
           created_at: string
+          email_notifications_enabled: boolean | null
+          onboarding_completed: boolean | null
+          onboarding_completed_at: string | null
+          onboarding_step: number | null
           selected_year: number
           updated_at: string
           user_id: string
+          user_profile_setup: Json | null
+          welcome_shown: boolean | null
         }
         Insert: {
           created_at?: string
+          email_notifications_enabled?: boolean | null
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
+          onboarding_step?: number | null
           selected_year?: number
           updated_at?: string
           user_id: string
+          user_profile_setup?: Json | null
+          welcome_shown?: boolean | null
         }
         Update: {
           created_at?: string
+          email_notifications_enabled?: boolean | null
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
+          onboarding_step?: number | null
           selected_year?: number
           updated_at?: string
           user_id?: string
+          user_profile_setup?: Json | null
+          welcome_shown?: boolean | null
         }
         Relationships: []
       }
@@ -392,7 +410,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      import_budget_from_json: {
+        Args: { budget_json: Json }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

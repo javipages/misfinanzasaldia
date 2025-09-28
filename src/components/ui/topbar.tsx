@@ -1,15 +1,15 @@
 import { PanelLeftIcon, Grid3X3, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useYearStore } from "@/store/year";
+import { useUserStore } from "@/store/user";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useViewMode } from "@/store/viewModeStore";
 
 export function Topbar() {
   const isMobile = useIsMobile();
-  const year = useYearStore((s) => s.year);
-  const setYear = useYearStore((s) => s.setYear);
+  const year = useUserStore((s) => s.year);
+  const setYear = useUserStore((s) => s.setYear);
   const { toggleSidebar } = useSidebar();
   const { viewMode, setViewMode } = useViewMode();
 

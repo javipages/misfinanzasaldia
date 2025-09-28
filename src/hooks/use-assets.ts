@@ -10,7 +10,7 @@ import {
   upsertAssetValue,
   type AssetValueRow,
 } from "@/integrations/supabase/categories";
-import { useYearStore } from "@/store/year";
+import { useUserStore } from "@/store/user";
 
 export type AssetType = AssetCategoryInput["type"];
 
@@ -24,7 +24,7 @@ export type AssetItem = {
 
 export function useAssets() {
   const qc = useQueryClient();
-  const year = useYearStore((s) => s.year);
+  const year = useUserStore((s) => s.year);
 
   const assetsQuery = useQuery({
     queryKey: ["categories", "assets"],

@@ -4,13 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, PiggyBank, Target, TrendingUp } from "lucide-react";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
-import { useYearStore } from "@/store/year";
+import { useUserStore } from "@/store/user";
 import { useGoals } from "@/hooks/use-goals";
 import { useNavigate } from "react-router-dom";
 import { MONTHS } from "@/utils/constants";
 
 const Savings = () => {
-  const year = useYearStore((s) => s.year);
+  const year = useUserStore((s) => s.year);
   const navigate = useNavigate();
   const { monthlyData, totalAhorro, isLoading } = useDashboardData();
   const { goals } = useGoals();

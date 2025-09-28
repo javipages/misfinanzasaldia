@@ -22,7 +22,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { AddValueDialog } from "@/components/ui/add-value-dialog";
 import { ManageEntriesDialog } from "@/components/ui/manage-entries-dialog";
 
-import { useYearStore } from "@/store/year";
+import { useUserStore } from "@/store/user";
 import { useCategoryMatrix } from "@/hooks/use-category-matrix";
 
 export type CategoryMatrixRef = {
@@ -57,7 +57,7 @@ const MONTHS = [
 
 export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
   function CategoryMatrix({ kind, year, onStatsChange }: Props, ref) {
-    const storeYear = useYearStore((s) => s.year);
+    const storeYear = useUserStore((s) => s.year);
     const resolvedYear = year ?? storeYear;
     const onStatsRef = useRef<typeof onStatsChange>(onStatsChange);
     useEffect(() => {

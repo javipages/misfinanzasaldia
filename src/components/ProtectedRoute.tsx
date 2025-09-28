@@ -1,5 +1,7 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/useAuth";
+import { useUserStore } from "@/store/user";
+import { useEffect } from "react";
 
 const LoadingState = () => (
   <div className="flex items-center justify-center">
@@ -9,9 +11,17 @@ const LoadingState = () => (
 );
 
 const ProtectedRoute = () => {
-  const { session, loading } = useAuth();
+  const { session, loading: authLoading } = useAuth();
+  const location = useLocation();
+  const { onboardingCompleted, onboardingLoading, hasHydrated, hydrate } =
+    useUserStore();
+  useEffect(() => {
+    if (session) {
+      hydrate();
+    }
+  }, [session, hydrate]);
 
-  if (loading) {
+  if (authLoading || onboardingLoading || !hasHydrated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingState />
@@ -21,6 +31,16 @@ const ProtectedRoute = () => {
 
   if (!session) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // If user hasn't completed onboarding and is not already on onboarding page
+  if (!onboardingCompleted && location.pathname !== "/onboarding") {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  // If user completed onboarding but is trying to access onboarding page, redirect to home
+  if (onboardingCompleted && location.pathname === "/onboarding") {
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;

@@ -26,8 +26,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { useEffect } from "react";
-import { useYearStore } from "@/store/year";
+import { useUserStore } from "@/store/user";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebar } from "@/components/ui/sidebar";
 
@@ -48,9 +47,8 @@ const items = [
 export function AppSidebar() {
   const { signOut } = useAuth();
   const location = useLocation();
-  const year = useYearStore((s) => s.year);
-  const hydrate = useYearStore((s) => s.hydrate);
-  const setYear = useYearStore((s) => s.setYear);
+  const year = useUserStore((s) => s.year);
+  const setYear = useUserStore((s) => s.setYear);
   const isMobile = useIsMobile();
   const { setOpenMobile } = useSidebar();
 
@@ -63,10 +61,6 @@ export function AppSidebar() {
       setOpenMobile(false);
     }
   };
-
-  useEffect(() => {
-    void hydrate();
-  }, [hydrate]);
 
   return (
     <Sidebar variant="inset">

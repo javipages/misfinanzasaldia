@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useYearStore } from "@/store/year";
+import { useUserStore } from "@/store/user";
 import {
   listGoalsForYear,
   createGoalRow,
@@ -13,7 +13,7 @@ import {
 export type Goal = GoalRow;
 
 export const useGoals = () => {
-  const { year } = useYearStore();
+  const { year } = useUserStore();
   const qc = useQueryClient();
   const QK = useMemo(
     () => ({ goals: (y: number) => ["goals", y] as const }),

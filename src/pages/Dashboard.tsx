@@ -36,7 +36,7 @@ import {
   useDashboardData,
   useDashboardMetrics,
 } from "@/hooks/use-dashboard-data";
-import { useYearStore } from "@/store/year";
+import { useUserStore } from "@/store/user";
 
 const Dashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(
@@ -44,7 +44,7 @@ const Dashboard = () => {
   );
   const [showPreviousYear, setShowPreviousYear] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
-  const year = useYearStore((s) => s.year);
+  const year = useUserStore((s) => s.year);
 
   const data = useDashboardData(selectedMonth);
   const metrics = useDashboardMetrics(selectedMonth);

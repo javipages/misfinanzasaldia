@@ -9,7 +9,7 @@ interface ViewModeState {
 export const useViewMode = create<ViewModeState>()(
   persist(
     (set) => ({
-      viewMode: "cards",
+      viewMode: "table",
       setViewMode: (mode) => set({ viewMode: mode }),
     }),
     {

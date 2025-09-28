@@ -46,7 +46,7 @@ import { AddMovementDialog } from "@/components/ui/add-movement-dialog";
 import { ExportDialog } from "@/components/ui/export-dialog";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { ImportBudgetDialog } from "@/components/ui/import-budget-dialog";
-import { useYearStore } from "@/store/year";
+import { useUserStore } from "@/store/user";
 import { useViewMode } from "@/store/viewModeStore";
 import {
   useMovements,
@@ -74,7 +74,7 @@ const MONTHS = [
 ];
 
 const Movements = () => {
-  const year = useYearStore((s) => s.year);
+  const year = useUserStore((s) => s.year);
   const [refreshKey, setRefreshKey] = useState(0);
   const { viewMode } = useViewMode();
   const {
