@@ -117,6 +117,95 @@ export async function deleteExpenseCategory(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// Bulk operations for onboarding
+export async function bulkCreateIncomeCategories(
+  categoryNames: string[]
+): Promise<CategoryRow[]> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("User not authenticated");
+
+  // Get existing categories to determine display_order
+  const existingCategories = await listIncomeCategories();
+  const maxOrder = Math.max(
+    ...existingCategories.map((c) => c.display_order),
+    0
+  );
+
+  const categoriesToInsert = categoryNames.map((name, index) => ({
+    name,
+    display_order: maxOrder + index + 1,
+  }));
+
+  const { data, error } = await supabase
+    .from(TABLE_INCOME_CATEGORIES)
+    .insert(categoriesToInsert)
+    .select();
+
+  if (error) throw error;
+  return data as CategoryRow[];
+}
+
+export async function bulkCreateExpenseCategories(
+  categoryNames: string[]
+): Promise<CategoryRow[]> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("User not authenticated");
+
+  // Get existing categories to determine display_order
+  const existingCategories = await listExpenseCategories();
+  const maxOrder = Math.max(
+    ...existingCategories.map((c) => c.display_order),
+    0
+  );
+
+  const categoriesToInsert = categoryNames.map((name, index) => ({
+    name,
+    display_order: maxOrder + index + 1,
+  }));
+
+  const { data, error } = await supabase
+    .from(TABLE_EXPENSE_CATEGORIES)
+    .insert(categoriesToInsert)
+    .select();
+
+  if (error) throw error;
+  return data as CategoryRow[];
+}
+
+export async function bulkCreateAssetCategories(
+  categoryNames: string[]
+): Promise<AssetCategoryRow[]> {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError) throw userError;
+  const userId = userData.user?.id;
+  if (!userId) throw new Error("User not authenticated");
+
+  // Get existing categories to determine display_order
+  const existingCategories = await listAssetCategories();
+  const maxOrder = Math.max(
+    ...existingCategories.map((c) => c.display_order),
+    0
+  );
+
+  const categoriesToInsert = categoryNames.map((name, index) => ({
+    name,
+    type: "otro" as const, // Default type for onboarding categories
+    display_order: maxOrder + index + 1,
+  }));
+
+  const { data, error } = await supabase
+    .from(TABLE_ASSET_CATEGORIES)
+    .insert(categoriesToInsert)
+    .select();
+
+  if (error) throw error;
+  return data as AssetCategoryRow[];
+}
+
 // Entry-based API
 export type EntryRow = {
   id: string;

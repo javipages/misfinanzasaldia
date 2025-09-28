@@ -6,6 +6,11 @@ import {
   UserData,
   UserProfileSetup,
 } from "@/integrations/supabase/preferences";
+import {
+  bulkCreateIncomeCategories,
+  bulkCreateExpenseCategories,
+  bulkCreateAssetCategories,
+} from "@/integrations/supabase/categories";
 
 type UserState = {
   // Year management
@@ -78,6 +83,31 @@ export const useUserStore = create<UserState>((set, get) => ({
     set({ onboardingLoading: true });
     try {
       const currentStep = get().userData?.onboarding_step ?? 0;
+
+      // Save categories to specific tables if they don't exist
+      const promises = [];
+
+      // Save income categories
+      if (userProfile.incomeCategories.length > 0) {
+        promises.push(bulkCreateIncomeCategories(userProfile.incomeCategories));
+      }
+
+      // Save expense categories
+      if (userProfile.expenseCategories.length > 0) {
+        promises.push(
+          bulkCreateExpenseCategories(userProfile.expenseCategories)
+        );
+      }
+
+      // Save asset categories
+      if (userProfile.assetCategories.length > 0) {
+        promises.push(bulkCreateAssetCategories(userProfile.assetCategories));
+      }
+
+      // Wait for all category insertions to complete
+      await Promise.all(promises);
+
+      // Update user onboarding data
       const newData = await updateUserOnboarding(
         currentStep + 1,
         true,
