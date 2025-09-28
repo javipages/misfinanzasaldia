@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Wallet, TrendingUp, DollarSign, GripVertical } from "lucide-react";
 import { useAssets, type AssetItem } from "@/hooks/use-assets";
-import { useViewMode } from "@/store/viewModeStore";
+import { useViewMode, useViewModeEffect } from "@/store/viewModeStore";
 import {
   DndContext,
   PointerSensor,
@@ -24,6 +24,9 @@ import { MONTHS } from "@/utils/constants";
 const Assets = () => {
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const { viewMode } = useViewMode();
+
+  // Effect para resetear automáticamente a modo tabla en desktop
+  useViewModeEffect();
 
   const { assets, swapOrder, updateAssetValue } = useAssets();
 

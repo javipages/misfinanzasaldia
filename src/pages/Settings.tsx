@@ -17,6 +17,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  ContentCardSkeleton,
+  TableSkeleton,
+} from "@/components/PageSkeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type EditableCategory = { id: string; name: string; display_order: number };
 
@@ -189,7 +194,63 @@ export default function Settings() {
   };
 
   if (loading) {
-    return <div className="p-4">Cargando...</div>;
+    return (
+      <div className="space-y-6 p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <Separator />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, idx) => (
+            <ContentCardSkeleton
+              key={`category-${idx}`}
+              headerWidth="w-48"
+              contentClassName="space-y-4"
+            >
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full sm:w-28" />
+              </div>
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, rowIdx) => (
+                  <Skeleton
+                    key={`category-row-${idx}-${rowIdx}`}
+                    className="h-10 w-full"
+                  />
+                ))}
+              </div>
+            </ContentCardSkeleton>
+          ))}
+        </div>
+        <Separator />
+        <ContentCardSkeleton
+          headerWidth="w-60"
+          contentClassName="space-y-4"
+        >
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full sm:w-36" />
+            <Skeleton className="h-10 w-full sm:w-28" />
+          </div>
+          <TableSkeleton
+            columns={3}
+            columnClassName="grid grid-cols-1 gap-3 md:grid-cols-3"
+          />
+        </ContentCardSkeleton>
+        <Separator />
+        <ContentCardSkeleton
+          headerWidth="w-48"
+          contentClassName="space-y-4"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-8 w-32" />
+          </div>
+          <Skeleton className="h-24 w-full" />
+        </ContentCardSkeleton>
+      </div>
+    );
   }
 
   async function handleAddIncome(name: string) {

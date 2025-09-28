@@ -42,7 +42,6 @@ const Dashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(
     undefined
   );
-  const [showPreviousYear, setShowPreviousYear] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const year = useUserStore((s) => s.year);
 
@@ -67,16 +66,6 @@ const Dashboard = () => {
 
   console.log(data.monthlyData);
 
-  const formatComparison = (change: number, selectedMonth?: number) => {
-    const monthInfo = months.find((m) => m.value === selectedMonth);
-    const comparisonText =
-      selectedMonth && monthInfo
-        ? `vs ${monthInfo.shortLabel} ${year - 1}`
-        : `vs ${year - 1}`;
-
-    return `${formatChange(change)} ${comparisonText}`;
-  };
-
   // Chart configurations
   const chartConfig = {
     ingresos: {
@@ -87,29 +76,11 @@ const Dashboard = () => {
       label: "Gastos",
       color: "#ef4444", // Rojo para gastos negativos
     },
-    prevIngresos: {
-      label: "Ingresos Año Anterior",
-      color: "#16a34a", // Verde oscuro para comparación
-    },
-    prevGastos: {
-      label: "Gastos Año Anterior",
-      color: "#dc2626", // Rojo oscuro para comparación
-    },
     patrimonio: {
       label: "Patrimonio",
       color: "#3b82f6", // Azul para patrimonio
     },
   } satisfies ChartConfig;
-
-  const formatChange = (change: number) => {
-    const isPositive = change > 0;
-    const isNegative = change < 0;
-    const absChange = Math.abs(change);
-
-    if (change === 0) return "Sin cambios";
-
-    return `${isPositive ? "+" : isNegative ? "" : ""}${absChange.toFixed(1)}%`;
-  };
 
   if (data.isLoading) {
     return (
@@ -197,7 +168,6 @@ const Dashboard = () => {
       </div>
     );
   }
-  console.log(showPreviousYear);
   return (
     <div className="space-y-6">
       {/* Header with filters */}
@@ -239,19 +209,6 @@ const Dashboard = () => {
               ))}
             </SelectContent>
           </Select>
-
-          <Button
-            variant={showPreviousYear ? "default" : "outline"}
-            size="sm"
-            onClick={() => setShowPreviousYear(!showPreviousYear)}
-            className="w-full sm:w-auto"
-          >
-            <TrendingUp className="h-4 w-4 mr-2" />
-            {showPreviousYear ? "Ocultar" : "Comparar"}{" "}
-            {selectedMonth
-              ? months.find((m) => m.value === selectedMonth)?.shortLabel
-              : year - 1}
-          </Button>
         </div>
       </div>
 
@@ -260,30 +217,22 @@ const Dashboard = () => {
         <MetricCard
           title="Total Ingresos"
           value={`${metrics.totalIngresos.toLocaleString()}€`}
-          change={formatComparison(metrics.ingresosChange, selectedMonth)}
           icon={TrendingUp}
-          variant={metrics.ingresosChange >= 0 ? "success" : "warning"}
         />
         <MetricCard
           title="Total Gastos"
           value={`${metrics.totalGastos.toLocaleString()}€`}
-          change={formatComparison(metrics.gastosChange, selectedMonth)}
           icon={TrendingDown}
-          variant={metrics.gastosChange <= 0 ? "success" : "warning"}
         />
         <MetricCard
           title="Ahorro Neto"
           value={`${metrics.totalAhorro.toLocaleString()}€`}
-          change={formatComparison(metrics.ahorroChange, selectedMonth)}
           icon={Target}
-          variant={metrics.ahorroChange >= 0 ? "success" : "warning"}
         />
         <MetricCard
           title="Patrimonio Total"
           value={`${metrics.currentPatrimony.toLocaleString()}€`}
-          change={formatComparison(metrics.patrimonioChange, selectedMonth)}
           icon={Wallet}
-          variant={metrics.patrimonioChange >= 0 ? "success" : "warning"}
         />
       </div>
 
@@ -299,25 +248,12 @@ const Dashboard = () => {
                   }`
                 : `Resumen Mensual ${year}`}
             </CardTitle>
-            {showPreviousYear && (
-              <p className="text-sm text-muted-foreground">
-                Comparación con{" "}
-                {selectedMonth
-                  ? `${
-                      months.find((m) => m.value === selectedMonth)?.shortLabel
-                    } ${year - 1}`
-                  : `${year - 1}`}{" "}
-                (mismo período)
-              </p>
-            )}
           </CardHeader>
           <CardContent className="px-0 pr-2 md:pr-4">
             <ChartContainer config={chartConfig}>
               <ComposedChart
                 data={data.monthlyData}
-                key={`monthly-${selectedMonth ?? "all"}-${
-                  showPreviousYear ? "prev-on" : "prev-off"
-                }`}
+                key={`monthly-${selectedMonth ?? "all"}`}
               >
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                 <XAxis dataKey="month" />
@@ -349,42 +285,6 @@ const Dashboard = () => {
                   fill="var(--color-gastos)"
                   name="Gastos"
                 />
-                {showPreviousYear && (
-                  <>
-                    <Bar
-                      dataKey="prevIngresos"
-                      fill="var(--color-prevIngresos)"
-                      name="Ingresos Año Anterior"
-                    />
-                    <Bar
-                      dataKey="prevGastos"
-                      fill="var(--color-prevGastos)"
-                      name="Gastos Año Anterior"
-                    />
-                  </>
-                )}
-                {showPreviousYear && (
-                  <>
-                    <Line
-                      type="monotone"
-                      dataKey="prevIngresos"
-                      stroke="var(--color-prevIngresos)"
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      name="Ingresos Año Anterior"
-                      dot={false}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="prevGastos"
-                      stroke="var(--color-prevGastos)"
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      name="Gastos Año Anterior"
-                      dot={false}
-                    />
-                  </>
-                )}
               </ComposedChart>
             </ChartContainer>
           </CardContent>

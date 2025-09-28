@@ -30,6 +30,13 @@ import {
 } from "lucide-react";
 import { useGoals, Goal } from "@/hooks/use-goals";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import {
+  ContentCardSkeleton,
+  PageHeaderSkeleton,
+  SummaryCardsSkeleton,
+  TableSkeleton,
+} from "@/components/PageSkeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Goals = () => {
   const { goals, loading, error, createGoal, updateGoal, deleteGoal } =
@@ -275,6 +282,55 @@ const Goals = () => {
     return Math.max(1, months);
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <PageHeaderSkeleton actions={1} descriptionLines={2} />
+        <SummaryCardsSkeleton
+          count={4}
+          columnsClassName="md:grid-cols-2 lg:grid-cols-4"
+        />
+        <ContentCardSkeleton
+          headerWidth="w-72"
+          contentClassName="space-y-4"
+        >
+          <Skeleton className="h-4 w-40" />
+          <TableSkeleton
+            columns={6}
+            columnClassName="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6"
+          />
+        </ContentCardSkeleton>
+        <ContentCardSkeleton
+          headerWidth="w-56"
+          contentClassName="space-y-4"
+        >
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <div
+                key={`projection-${idx}`}
+                className="space-y-2 rounded-lg border border-border/40 p-3"
+              >
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            ))}
+          </div>
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <div
+                key={`summary-${idx}`}
+                className="flex flex-wrap items-center justify-between gap-2"
+              >
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+            ))}
+          </div>
+        </ContentCardSkeleton>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -415,8 +471,6 @@ const Goals = () => {
           </DialogContent>
         </Dialog>
       </div>
-
-      {loading && <p>Cargando objetivos...</p>}
       {error && <p className="text-red-500">Error: {error}</p>}
 
       {/* Goals Overview */}

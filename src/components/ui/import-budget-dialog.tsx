@@ -23,6 +23,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAllCategories } from "@/hooks/use-category-matrix";
 import { Alert, AlertDescription } from "./alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ImportResult {
   success: boolean;
@@ -337,8 +338,24 @@ Responde ÚNICAMENTE con el JSON válido, sin explicaciones adicionales.`;
                 </div>
 
                 {categoriesLoading ? (
-                  <div className="text-xs text-muted-foreground">
-                    Cargando tus categorías...
+                  <div className="space-y-3">
+                    <Skeleton className="h-3 w-40" />
+                    <div className="flex flex-wrap gap-1">
+                      {Array.from({ length: 5 }).map((_, idx) => (
+                        <Skeleton
+                          key={`income-skeleton-${idx}`}
+                          className="h-5 w-20 rounded-full"
+                        />
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {Array.from({ length: 5 }).map((_, idx) => (
+                        <Skeleton
+                          key={`expense-skeleton-${idx}`}
+                          className="h-5 w-24 rounded-full"
+                        />
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-2">

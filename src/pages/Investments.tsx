@@ -40,6 +40,13 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import {
+  ContentCardSkeleton,
+  PageHeaderSkeleton,
+  SummaryCardsSkeleton,
+  TableSkeleton,
+} from "@/components/PageSkeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Investments = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -266,19 +273,26 @@ const Investments = () => {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold text-foreground">Inversiones</h1>
-            <p className="text-muted-foreground">
-              Gestiona tu portafolio de inversiones
-            </p>
+        <PageHeaderSkeleton actions={1} />
+        <SummaryCardsSkeleton count={4} />
+        <ContentCardSkeleton headerWidth="w-56">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-8 w-24" />
+            </div>
+            <TableSkeleton
+              columns={8}
+              columnClassName="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8"
+            />
           </div>
-          <Button onClick={handleAddInvestment} className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Inversión
-          </Button>
-        </div>
-        <div className="text-center py-8">Cargando inversiones...</div>
+        </ContentCardSkeleton>
+        <ContentCardSkeleton headerWidth="w-64">
+          <TableSkeleton
+            columns={4}
+            columnClassName="grid grid-cols-2 gap-3 md:grid-cols-4"
+          />
+        </ContentCardSkeleton>
       </div>
     );
   }

@@ -1,11 +1,15 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/useAuth";
 import type { ReactNode } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const LoadingState = () => (
-  <div className="flex items-center justify-center">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-    <span className="ml-2 text-gray-600">Cargando...</span>
+  <div className="flex flex-col items-center gap-4">
+    <Skeleton className="h-12 w-12 rounded-full" />
+    <div className="space-y-2 text-center">
+      <Skeleton className="h-4 w-28" />
+      <Skeleton className="h-4 w-40" />
+    </div>
   </div>
 );
 

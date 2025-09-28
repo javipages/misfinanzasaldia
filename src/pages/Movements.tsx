@@ -46,8 +46,15 @@ import { AddMovementDialog } from "@/components/ui/add-movement-dialog";
 import { ExportDialog } from "@/components/ui/export-dialog";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { ImportBudgetDialog } from "@/components/ui/import-budget-dialog";
+import {
+  ContentCardSkeleton,
+  PageHeaderSkeleton,
+  SummaryCardsSkeleton,
+  TableSkeleton,
+} from "@/components/PageSkeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useUserStore } from "@/store/user";
-import { useViewMode } from "@/store/viewModeStore";
+import { useViewMode, useViewModeEffect } from "@/store/viewModeStore";
 import {
   useMovements,
   type MovementRow,
@@ -77,6 +84,9 @@ const Movements = () => {
   const year = useUserStore((s) => s.year);
   const [refreshKey, setRefreshKey] = useState(0);
   const { viewMode } = useViewMode();
+
+  // Effect para resetear automáticamente a modo tabla en desktop
+  useViewModeEffect();
   const {
     movements,
     categories,
@@ -170,7 +180,30 @@ const Movements = () => {
   };
 
   if (isLoading) {
-    return <div className="p-6">Cargando movimientos...</div>;
+    return (
+      <div className="space-y-6">
+        <PageHeaderSkeleton actions={3} descriptionLines={2} />
+        <SummaryCardsSkeleton count={4} />
+        <ContentCardSkeleton headerWidth="w-64" contentClassName="space-y-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 7 }).map((_, idx) => (
+              <div key={`filter-${idx}`} className="space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ))}
+          </div>
+          <TableSkeleton
+            columns={5}
+            columnClassName="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5"
+          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-10 w-40" />
+          </div>
+        </ContentCardSkeleton>
+      </div>
+    );
   }
 
   return (
