@@ -12,7 +12,6 @@ import {
   ChevronDown,
   FileText,
   Download,
-  Grid3X3,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -48,6 +47,7 @@ import { ExportDialog } from "@/components/ui/export-dialog";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { ImportBudgetDialog } from "@/components/ui/import-budget-dialog";
 import { useYearStore } from "@/store/year";
+import { useViewMode } from "@/store/viewModeStore";
 import {
   useMovements,
   type MovementRow,
@@ -76,7 +76,7 @@ const MONTHS = [
 const Movements = () => {
   const year = useYearStore((s) => s.year);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
+  const { viewMode } = useViewMode();
   const {
     movements,
     categories,
@@ -201,26 +201,6 @@ const Movements = () => {
               Exportar
             </Button>
           </ExportDialog>
-          <div className="flex items-center gap-2">
-            <Button
-              variant={viewMode === "cards" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("cards")}
-              className="flex items-center gap-2"
-            >
-              <Grid3X3 className="h-4 w-4" />
-              Cajas
-            </Button>
-            <Button
-              variant={viewMode === "table" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("table")}
-              className="flex items-center gap-2"
-            >
-              <Table className="h-4 w-4" />
-              Tabla
-            </Button>
-          </div>
           <Button
             onClick={() => setAddDialogOpen(true)}
             className="w-full sm:w-auto"

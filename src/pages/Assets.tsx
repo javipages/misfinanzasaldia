@@ -3,16 +3,9 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Wallet,
-  TrendingUp,
-  DollarSign,
-  GripVertical,
-  Table,
-  Grid3X3,
-} from "lucide-react";
+import { Wallet, TrendingUp, DollarSign, GripVertical } from "lucide-react";
 import { useAssets, type AssetItem } from "@/hooks/use-assets";
+import { useViewMode } from "@/store/viewModeStore";
 import {
   DndContext,
   PointerSensor,
@@ -30,7 +23,7 @@ import { MONTHS } from "@/utils/constants";
 
 const Assets = () => {
   const [editingCell, setEditingCell] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"table" | "cards">("cards");
+  const { viewMode } = useViewMode();
 
   const { assets, swapOrder, updateAssetValue } = useAssets();
 
@@ -182,26 +175,6 @@ const Assets = () => {
         <p className="text-muted-foreground">
           Gestiona el balance de tus activos financieros
         </p>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button
-          variant={viewMode === "cards" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setViewMode("cards")}
-          className="flex items-center gap-2"
-        >
-          <Grid3X3 className="h-4 w-4" />
-          Cajas
-        </Button>
-        <Button
-          variant={viewMode === "table" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setViewMode("table")}
-          className="flex items-center gap-2"
-        >
-          <Table className="h-4 w-4" />
-          Tabla
-        </Button>
       </div>
 
       {/* Vista de tarjetas */}
