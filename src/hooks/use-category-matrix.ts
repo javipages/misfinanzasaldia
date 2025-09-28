@@ -103,7 +103,6 @@ export function useCategoryMatrix(kind: Kind, year: number) {
     mutationFn: async ({
       aId,
       aOrder,
-      bId,
       bOrder,
     }: {
       aId: string;
@@ -111,33 +110,84 @@ export function useCategoryMatrix(kind: Kind, year: number) {
       bId: string;
       bOrder: number;
     }) => {
-      const current = (categoriesQuery.data ?? []).map((x) => x.display_order);
-      const maxOrder = current.length ? Math.max(...current) : 0;
-      const tempOrder = Math.max(maxOrder + 1, aOrder + 1, bOrder + 1);
+      // Calculate new positions properly
+      const fromIndex = aOrder - 1; // Convert to 0-based index
+      const toIndex = bOrder - 1; // Convert to 0-based index
+
+      if (fromIndex === toIndex) return;
+
+      const categories = [...(categoriesQuery.data ?? [])].sort(
+        (a, b) => a.display_order - b.display_order
+      );
+
+      const movingCategory = categories.find((c) => c.id === aId);
+      if (!movingCategory) return;
+
+      // Remove the moving category from its current position
+      categories.splice(fromIndex, 1);
+
+      // Insert it at the new position
+      categories.splice(toIndex, 0, movingCategory);
+
+      // Update all display_order values to be consecutive
+      const updates = categories.map((category, index) => ({
+        id: category.id,
+        display_order: index + 1,
+      }));
+
+      // Execute all updates
       if (kind === "income") {
-        await updateIncomeCategory(aId, { display_order: tempOrder });
-        await updateIncomeCategory(bId, { display_order: aOrder });
-        await updateIncomeCategory(aId, { display_order: bOrder });
+        await Promise.all(
+          updates.map((update) =>
+            updateIncomeCategory(update.id, {
+              display_order: update.display_order,
+            })
+          )
+        );
       } else {
-        await updateExpenseCategory(aId, { display_order: tempOrder });
-        await updateExpenseCategory(bId, { display_order: aOrder });
-        await updateExpenseCategory(aId, { display_order: bOrder });
+        await Promise.all(
+          updates.map((update) =>
+            updateExpenseCategory(update.id, {
+              display_order: update.display_order,
+            })
+          )
+        );
       }
     },
-    onMutate: async ({ aId, aOrder, bId, bOrder }) => {
+    onMutate: async ({ aId, aOrder, bOrder }) => {
       await qc.cancelQueries({ queryKey: QK.categories(kind) });
       const prev = qc.getQueryData<
         { id: string; name: string; display_order: number }[]
       >(QK.categories(kind));
+
       if (prev) {
-        const next = prev.map((c) => {
-          if (c.id === aId) return { ...c, display_order: bOrder };
-          if (c.id === bId) return { ...c, display_order: aOrder };
-          return c;
-        });
-        next.sort((a, b) => a.display_order - b.display_order);
-        qc.setQueryData(QK.categories(kind), next);
+        // Calculate new positions for optimistic update
+        const fromIndex = aOrder - 1;
+        const toIndex = bOrder - 1;
+
+        if (fromIndex !== toIndex) {
+          const categories = [...prev].sort(
+            (a, b) => a.display_order - b.display_order
+          );
+          const movingCategory = categories.find((c) => c.id === aId);
+
+          if (movingCategory) {
+            // Remove from current position
+            categories.splice(fromIndex, 1);
+            // Insert at new position
+            categories.splice(toIndex, 0, movingCategory);
+
+            // Update display_order values
+            const next = categories.map((category, index) => ({
+              ...category,
+              display_order: index + 1,
+            }));
+
+            qc.setQueryData(QK.categories(kind), next);
+          }
+        }
       }
+
       return { prev } as const;
     },
     onError: (_e, _v, ctx) => {

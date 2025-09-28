@@ -104,6 +104,22 @@ export function useSettings() {
       };
       return createIncomeCategory(input);
     },
+    onMutate: async (name: string) => {
+      await qc.cancelQueries({ queryKey: QK.income });
+      const prev = qc.getQueryData<EditableCategory[]>(QK.income);
+      const newCategory: EditableCategory = {
+        id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+        name,
+        display_order: nextOrder(prev ?? []),
+      };
+      if (prev) {
+        qc.setQueryData<EditableCategory[]>(QK.income, [...prev, newCategory]);
+      }
+      return { prev } as const;
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(QK.income, ctx.prev);
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: QK.income });
     },
@@ -116,6 +132,22 @@ export function useSettings() {
         display_order: nextOrder(expenseQuery.data ?? []),
       };
       return createExpenseCategory(input);
+    },
+    onMutate: async (name: string) => {
+      await qc.cancelQueries({ queryKey: QK.expense });
+      const prev = qc.getQueryData<EditableCategory[]>(QK.expense);
+      const newCategory: EditableCategory = {
+        id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+        name,
+        display_order: nextOrder(prev ?? []),
+      };
+      if (prev) {
+        qc.setQueryData<EditableCategory[]>(QK.expense, [...prev, newCategory]);
+      }
+      return { prev } as const;
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(QK.expense, ctx.prev);
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: QK.expense });
@@ -136,6 +168,27 @@ export function useSettings() {
         display_order: nextOrder(assetsQuery.data ?? []),
       };
       return createAssetCategory(input);
+    },
+    onMutate: async ({ name, type }) => {
+      await qc.cancelQueries({ queryKey: QK.assets });
+      const prev = qc.getQueryData<
+        (EditableCategory & { type: AssetCategoryRow["type"] })[]
+      >(QK.assets);
+      const newAsset: EditableCategory & { type: AssetCategoryRow["type"] } = {
+        id: `temp-${Date.now()}`, // Temporary ID for optimistic update
+        name,
+        display_order: nextOrder(prev ?? []),
+        type,
+      };
+      if (prev) {
+        qc.setQueryData<
+          (EditableCategory & { type: AssetCategoryRow["type"] })[]
+        >(QK.assets, [...prev, newAsset]);
+      }
+      return { prev } as const;
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(QK.assets, ctx.prev);
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: QK.assets });
@@ -323,21 +376,30 @@ export function useSettings() {
       id: string;
       direction: "up" | "down";
     }) => {
-      const current = (qc.getQueryData<EditableCategory[]>(QK.income) ?? [])
-        .slice()
+      // Get the current data from the database, not the cache
+      const currentData = await listIncomeCategories();
+      const current = currentData
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          display_order: c.display_order,
+        }))
         .sort((a, b) => a.display_order - b.display_order);
+
       const index = current.findIndex((c) => c.id === id);
       if (index < 0) return;
+
       const swapWith = direction === "up" ? index - 1 : index + 1;
       if (swapWith < 0 || swapWith >= current.length) return;
+
       const a = current[index];
       const b = current[swapWith];
       const tmp = a.display_order;
-      a.display_order = b.display_order;
-      b.display_order = tmp;
+
+      // Update both items with their new display_order values
       await Promise.all([
-        updateIncomeCategory(a.id, { display_order: a.display_order }),
-        updateIncomeCategory(b.id, { display_order: b.display_order }),
+        updateIncomeCategory(a.id, { display_order: b.display_order }),
+        updateIncomeCategory(b.id, { display_order: tmp }),
       ]);
     },
     onMutate: async ({ id, direction }) => {
@@ -376,21 +438,30 @@ export function useSettings() {
       id: string;
       direction: "up" | "down";
     }) => {
-      const current = (qc.getQueryData<EditableCategory[]>(QK.expense) ?? [])
-        .slice()
+      // Get the current data from the database, not the cache
+      const currentData = await listExpenseCategories();
+      const current = currentData
+        .map((c) => ({
+          id: c.id,
+          name: c.name,
+          display_order: c.display_order,
+        }))
         .sort((a, b) => a.display_order - b.display_order);
+
       const index = current.findIndex((c) => c.id === id);
       if (index < 0) return;
+
       const swapWith = direction === "up" ? index - 1 : index + 1;
       if (swapWith < 0 || swapWith >= current.length) return;
+
       const a = current[index];
       const b = current[swapWith];
       const tmp = a.display_order;
-      a.display_order = b.display_order;
-      b.display_order = tmp;
+
+      // Update both items with their new display_order values
       await Promise.all([
-        updateExpenseCategory(a.id, { display_order: a.display_order }),
-        updateExpenseCategory(b.id, { display_order: b.display_order }),
+        updateExpenseCategory(a.id, { display_order: b.display_order }),
+        updateExpenseCategory(b.id, { display_order: tmp }),
       ]);
     },
     onMutate: async ({ id, direction }) => {
