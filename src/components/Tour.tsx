@@ -1,7 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { driver, DriveStep } from "driver.js";
 import "driver.js/dist/driver.css";
 import { getTourSteps } from "@/tours/appTour";
+import { useSidebar } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 interface TourProps {
   isVisible: boolean;
   onClose: () => void;
@@ -10,8 +12,10 @@ interface TourProps {
 
 export const Tour = ({ isVisible, onClose, autoStart = false }: TourProps) => {
   const driverRef = useRef<ReturnType<typeof driver> | null>(null);
+  const { setOpenMobile } = useSidebar();
+  const isMobile = useIsMobile();
 
-  const steps = getTourSteps();
+  const steps = useMemo(() => getTourSteps(isMobile), [isMobile]);
 
   useEffect(() => {
     if (isVisible && steps.length > 0) {
@@ -25,11 +29,18 @@ export const Tour = ({ isVisible, onClose, autoStart = false }: TourProps) => {
         nextBtnText: "Siguiente",
         prevBtnText: "Anterior",
         doneBtnText: "Finalizar",
-        // Aplicar clase CSS personalizada
-        popoverClass: "custom-driver-popover",
         // Opciones adicionales para mejor experiencia
         animate: true,
         allowClose: true,
+        // Deshabilitar textos por defecto para evitar duplicación
+        showProgress: false,
+        // Callbacks para controlar la sidebar en móvil
+        onHighlightStarted: () => {
+          // En móvil, mantener la sidebar siempre abierta durante el tour
+          if (isMobile) {
+            setOpenMobile(true);
+          }
+        },
       });
 
       if (autoStart) {

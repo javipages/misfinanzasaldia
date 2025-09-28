@@ -35,7 +35,7 @@ export const appTourSteps: TourStep[] = [
     popover: {
       title: "Menú de Navegación",
       description:
-        "Aquí encontrarás todas las secciones: Dashboard, Movimientos, Ingresos, Gastos, Activos, Inversiones, Ahorros, Metas y Configuración.",
+        "Aquí encontrarás todas las secciones: Dashboard, Movimientos, Ingresos, Gastos, Activos, Inversiones, Ahorros, Objetivos y Configuración.",
       position: "right",
     },
   },
@@ -106,6 +106,45 @@ export const appTourSteps: TourStep[] = [
     },
   },
   {
+    id: "investments-section",
+    title: "Inversiones",
+    description:
+      "Gestiona tu portafolio de inversiones y realiza un seguimiento de su rendimiento.",
+    element: "[href='/investments']",
+    popover: {
+      title: "Inversiones",
+      description:
+        "Registra tus inversiones, acciones, fondos y criptomonedas para hacer un seguimiento completo de tu portafolio.",
+      position: "right",
+    },
+  },
+  {
+    id: "savings-section",
+    title: "Ahorro",
+    description:
+      "Gestiona tus cuentas de ahorro y metas de ahorro a corto y largo plazo.",
+    element: "[href='/savings']",
+    popover: {
+      title: "Ahorro",
+      description:
+        "Crea cuentas de ahorro específicas, establece metas y realiza un seguimiento de tu progreso hacia la libertad financiera.",
+      position: "right",
+    },
+  },
+  {
+    id: "goals-section",
+    title: "Objetivos",
+    description:
+      "Define y gestiona tus objetivos financieros para mantenerte motivado y enfocado.",
+    element: "[href='/goals']",
+    popover: {
+      title: "Objetivos",
+      description:
+        "Establece objetivos claros como comprar una casa, un viaje o la jubilación, y haz un seguimiento de tu progreso.",
+      position: "right",
+    },
+  },
+  {
     id: "settings-section",
     title: "Configuración",
     description:
@@ -133,9 +172,14 @@ export const appTourSteps: TourStep[] = [
   },
 ];
 
-export const getTourSteps = (): TourStep[] => {
-  // Personalizamos los pasos según la página actual
-  const baseSteps = [...appTourSteps];
+export const getTourSteps = (isMobile: boolean = false): TourStep[] => {
+  // Personalizamos los pasos según la página actual y el dispositivo
+  let baseSteps = [...appTourSteps];
+
+  // En móvil, excluimos el paso de dashboard-charts para una mejor experiencia
+  if (isMobile) {
+    baseSteps = baseSteps.filter((step) => step.id !== "dashboard-charts");
+  }
 
   return baseSteps;
 };
