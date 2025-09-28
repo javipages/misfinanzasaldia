@@ -356,7 +356,7 @@ const Onboarding = () => {
       component: (
         <div className="space-y-6">
           {/* Resumen de configuración */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
               <TrendingUp className="w-8 h-8 text-green-600 mx-auto mb-2" />
               <div className="font-semibold text-green-700">
@@ -375,7 +375,7 @@ const Onboarding = () => {
               <div className="text-sm text-red-600">Categorías de Gastos</div>
             </div>
 
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center col-span-2 md:col-span-1">
               <PiggyBank className="w-8 h-8 text-purple-600 mx-auto mb-2" />
               <div className="font-semibold text-purple-700">
                 {selectedCategories.asset.length}
