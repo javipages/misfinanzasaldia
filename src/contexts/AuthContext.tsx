@@ -28,17 +28,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const sendMagicLink = async (email: string) => {
-    // Sends a magic link according to Supabase Email provider settings
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        shouldCreateUser: true,
-        emailRedirectTo: window.location.origin,
-      },
-    });
-    return { error };
-  };
+  // OTP functionality commented out - uncomment when needed
+  // const sendMagicLink = async (email: string) => {
+  //   // Sends a magic link according to Supabase Email provider settings
+  //   const { error } = await supabase.auth.signInWithOtp({
+  //     email,
+  //     options: {
+  //       shouldCreateUser: true,
+  //       emailRedirectTo: window.location.origin,
+  //     },
+  //   });
+  //   return { error };
+  // };
 
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
@@ -57,7 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ session, loading, sendMagicLink, signInWithGoogle, signOut }}
+      value={{ session, loading, signInWithGoogle, signOut }}
     >
       {children}
     </AuthContext.Provider>
