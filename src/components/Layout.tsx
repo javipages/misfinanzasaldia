@@ -9,11 +9,14 @@ import {
   getUserData,
   updateUserTourCompleted,
 } from "@/integrations/supabase/preferences";
+import { usePrivacyEffect } from "@/store/privacyStore";
 
 export function Layout() {
   const [showTour, setShowTour] = useState(false);
   const [showTourOnLoad, setShowTourOnLoad] = useState(false);
   const location = useLocation();
+
+  usePrivacyEffect();
 
   // Check if we should show the tour automatically after onboarding
   useEffect(() => {

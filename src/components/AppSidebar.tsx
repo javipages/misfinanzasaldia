@@ -10,6 +10,8 @@ import {
   Settings,
   ArrowUpDown,
   HelpCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useAuth } from "@/contexts/useAuth";
 import { Button } from "@/components/ui/button";
@@ -30,6 +32,7 @@ import { Input } from "@/components/ui/input";
 import { useUserStore } from "@/store/user";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebar } from "@/components/ui/sidebar";
+import { usePrivacyStore } from "@/store/privacyStore";
 
 // Elementos del menú
 
@@ -56,6 +59,8 @@ export function AppSidebar({ onStartTour }: AppSidebarProps = {}) {
   const setYear = useUserStore((s) => s.setYear);
   const isMobile = useIsMobile();
   const { setOpenMobile } = useSidebar();
+  const maskNumbers = usePrivacyStore((s) => s.maskNumbers);
+  const toggleMaskNumbers = usePrivacyStore((s) => s.toggleMaskNumbers);
 
   const handleLogout = async () => {
     await signOut();
@@ -70,8 +75,8 @@ export function AppSidebar({ onStartTour }: AppSidebarProps = {}) {
   return (
     <Sidebar variant="inset">
       <SidebarHeader className="p-4">
-        {!isMobile && (
-          <div className="flex items-center gap-2 w-full">
+        <div className="flex items-center gap-2 w-full">
+          {!isMobile && (
             <Input
               type="number"
               min={2000}
@@ -81,9 +86,25 @@ export function AppSidebar({ onStartTour }: AppSidebarProps = {}) {
                 const v = Number(e.target.value || new Date().getFullYear());
                 void setYear(v);
               }}
+              className="flex-1"
             />
-          </div>
-        )}
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleMaskNumbers}
+            aria-pressed={maskNumbers}
+            aria-label={maskNumbers ? "Mostrar cantidades" : "Ocultar cantidades"}
+            title={maskNumbers ? "Mostrar cantidades" : "Ocultar cantidades"}
+            className="shrink-0"
+          >
+            {maskNumbers ? (
+              <EyeOff className="w-4 h-4" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
       </SidebarHeader>
 
       <SidebarContent>

@@ -195,3 +195,12 @@
 .driver-popover .driver-progress-bar .driver-progress-fill {
   @apply bg-blue-600 rounded-full h-2 transition-all duration-300;
 }
+
+/* Mascara de contenidos sensibles */
+.sensitive-number {
+  transition: filter 150ms ease;
+}
+
+body.mask-sensitive .sensitive-number {
+  filter: blur(0.6rem);
+}

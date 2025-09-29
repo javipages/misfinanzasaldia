@@ -1,4 +1,4 @@
-import { PanelLeftIcon, Grid3X3, Table, HelpCircle } from "lucide-react";
+import { PanelLeftIcon, Grid3X3, Table, HelpCircle, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUserStore } from "@/store/user";
@@ -6,6 +6,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useViewMode } from "@/store/viewModeStore";
 import { useLocation } from "react-router-dom";
+import { usePrivacyStore } from "@/store/privacyStore";
 
 interface TopbarProps {
   onStartTour?: () => void;
@@ -18,6 +19,8 @@ export function Topbar({ onStartTour }: TopbarProps = {}) {
   const { toggleSidebar } = useSidebar();
   const { viewMode, setViewMode } = useViewMode();
   const location = useLocation();
+  const maskNumbers = usePrivacyStore((s) => s.maskNumbers);
+  const toggleMaskNumbers = usePrivacyStore((s) => s.toggleMaskNumbers);
 
   // No mostrar en desktop
   if (!isMobile) {
@@ -62,27 +65,44 @@ export function Topbar({ onStartTour }: TopbarProps = {}) {
         )}
       </div>
 
-      {(location.pathname === "/movements" ||
-        location.pathname === "/assets") && (
-        <div className="flex items-center gap-1">
-          <Button
-            variant={viewMode === "cards" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("cards")}
-            className="h-8 px-2"
-          >
-            <Grid3X3 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "table" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("table")}
-            className="h-8 px-2"
-          >
-            <Table className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleMaskNumbers}
+          aria-pressed={maskNumbers}
+          aria-label={maskNumbers ? "Mostrar cantidades" : "Ocultar cantidades"}
+          title={maskNumbers ? "Mostrar cantidades" : "Ocultar cantidades"}
+          className="h-8 w-8"
+        >
+          {maskNumbers ? (
+            <EyeOff className="h-4 w-4" />
+          ) : (
+            <Eye className="h-4 w-4" />
+          )}
+        </Button>
+        {(location.pathname === "/movements" ||
+          location.pathname === "/assets") && (
+          <>
+            <Button
+              variant={viewMode === "cards" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("cards")}
+              className="h-8 px-2"
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              className="h-8 px-2"
+            >
+              <Table className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
