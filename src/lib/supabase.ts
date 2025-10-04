@@ -44,6 +44,38 @@ export type Database = {
         }
         Relationships: []
       }
+      asset_categories_years: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_categories_years_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asset_values: {
         Row: {
           amount: number
@@ -111,6 +143,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      expense_categories_years: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_years_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expense_entries: {
         Row: {
@@ -224,6 +288,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      income_categories_years: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "income_categories_years_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "income_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       income_entries: {
         Row: {
