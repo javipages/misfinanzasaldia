@@ -32,61 +32,108 @@ export function MatrixControls({
   ];
 
   return (
-    <div className="flex flex-col gap-4 mb-4 p-4 bg-muted/30 rounded-lg border border-border">
-      {/* Period selector */}
-      <div className="flex flex-col gap-2">
-        <Label className="text-sm font-medium">Período</Label>
-        <div className="flex flex-wrap gap-2">
-          {periods.map((period) => (
-            <Button
-              key={period.value}
-              size="sm"
-              variant={periodType === period.value ? "default" : "outline"}
-              onClick={() => onPeriodTypeChange(period.value)}
+    <div className="mb-4 rounded-xl border border-border bg-muted/30 p-3 md:p-4 shadow-xs">
+      {/* Encabezado y layout responsivo */}
+      <div className="flex flex-col gap-4 md:gap-5">
+        {/* Selector de período (segmented) */}
+        <div className="flex flex-col gap-2">
+          <Label className="text-xs md:text-sm font-medium text-muted-foreground">
+            Período
+          </Label>
+          <div className="inline-flex flex-wrap items-center gap-1 rounded-md border bg-background p-1">
+            {periods.map((period) => {
+              const selected = periodType === period.value;
+              return (
+                <Button
+                  key={period.value}
+                  size="sm"
+                  variant={selected ? "default" : "ghost"}
+                  className={`rounded-md px-3 md:px-4 ${
+                    selected ? "shadow-sm" : "hover:bg-accent/60"
+                  }`}
+                  aria-pressed={selected}
+                  onClick={() => onPeriodTypeChange(period.value)}
+                >
+                  {period.label}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Opciones como chips */}
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          <button
+            type="button"
+            onClick={() => onHideEmptyRowsChange(!hideEmptyRows)}
+            className={`group inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs md:text-sm transition-colors ${
+              hideEmptyRows
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background hover:bg-accent text-foreground"
+            }`}
+            aria-pressed={hideEmptyRows}
+          >
+            <Checkbox
+              id="hide-empty"
+              checked={hideEmptyRows}
+              aria-hidden
+              className="pointer-events-none"
+            />
+            <Label
+              htmlFor="hide-empty"
+              className="cursor-default pointer-events-none"
             >
-              {period.label}
-            </Button>
-          ))}
-        </div>
-      </div>
+              Ocultar filas vacías
+            </Label>
+          </button>
 
-      {/* Options */}
-      <div className="flex flex-wrap gap-4">
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="hide-empty"
-            checked={hideEmptyRows}
-            onCheckedChange={(checked) =>
-              onHideEmptyRowsChange(checked === true)
-            }
-          />
-          <Label htmlFor="hide-empty" className="text-sm cursor-pointer">
-            Ocultar filas vacías
-          </Label>
-        </div>
+          <button
+            type="button"
+            onClick={() => onShowHeatmapChange(!showHeatmap)}
+            className={`group inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs md:text-sm transition-colors ${
+              showHeatmap
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background hover:bg-accent text-foreground"
+            }`}
+            aria-pressed={showHeatmap}
+          >
+            <Checkbox
+              id="show-heatmap"
+              checked={showHeatmap}
+              aria-hidden
+              className="pointer-events-none"
+            />
+            <Label
+              htmlFor="show-heatmap"
+              className="cursor-default pointer-events-none"
+            >
+              Mapa de calor
+            </Label>
+          </button>
 
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="show-heatmap"
-            checked={showHeatmap}
-            onCheckedChange={(checked) => onShowHeatmapChange(checked === true)}
-          />
-          <Label htmlFor="show-heatmap" className="text-sm cursor-pointer">
-            Mostrar mapa de calor
-          </Label>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="show-variation"
-            checked={showVariation}
-            onCheckedChange={(checked) =>
-              onShowVariationChange(checked === true)
-            }
-          />
-          <Label htmlFor="show-variation" className="text-sm cursor-pointer">
-            Mostrar variación
-          </Label>
+          <button
+            type="button"
+            onClick={() => onShowVariationChange(!showVariation)}
+            className={`group inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs md:text-sm transition-colors ${
+              showVariation
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background hover:bg-accent text-foreground"
+            }`}
+            aria-pressed={showVariation}
+          >
+            <Checkbox
+              id="show-variation"
+              checked={showVariation}
+              aria-hidden
+              className="pointer-events-none"
+            />
+            <Label
+              htmlFor="show-variation"
+              className="cursor-default pointer-events-none"
+            >
+              Mostrar variación
+            </Label>
+          </button>
         </div>
       </div>
     </div>

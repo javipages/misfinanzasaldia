@@ -68,9 +68,9 @@ export function Layout() {
   return (
     <SidebarProvider>
       <AppSidebar onStartTour={handleStartTour} />
-      <SidebarInset>
+      <SidebarInset className="overflow-hidden">
         <Topbar onStartTour={handleStartTour} />
-        <div className="flex-1 p-4 md:p-6">
+        <div className="flex-1 p-4 md:p-6 overflow-auto">
           <Outlet />
         </div>
         <Tour

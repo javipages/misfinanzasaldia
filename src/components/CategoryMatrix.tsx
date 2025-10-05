@@ -312,7 +312,13 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                               id={row.category.id}
                               className={rowIdx % 2 === 1 ? "bg-muted/80" : ""}
                             >
-                              <td className="p-3 font-medium text-foreground sticky left-0 bg-inherit z-[5]">
+                              <td
+                                className={`p-3 font-medium text-foreground sticky left-0 z-[5] ${
+                                  rowIdx % 2 === 1
+                                    ? "bg-muted"
+                                    : "bg-background"
+                                }`}
+                              >
                                 <div className="flex items-center gap-2">
                                   <RowHandle id={row.category.id} />
                                   {(row.subcategories ?? []).length > 0 && (
@@ -391,7 +397,13 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                                   }}
                                 />
                               ))}
-                              <td className="p-3 text-center font-bold sticky right-0 bg-inherit z-[5]">
+                              <td
+                                className={`p-3 text-center font-bold sticky right-0 z-[5] ${
+                                  rowIdx % 2 === 1
+                                    ? "bg-muted"
+                                    : "bg-background"
+                                }`}
+                              >
                                 {calculateRowTotal(
                                   row.aggregatedTotals
                                 ).toLocaleString()}{" "}
@@ -412,7 +424,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                                     key={sub.id}
                                     className="border-b border-border/50 bg-muted/20"
                                   >
-                                    <td className="p-3 pl-6 text-sm text-muted-foreground sticky left-0 bg-inherit z-[5]">
+                                    <td className="p-3 pl-6 text-sm text-muted-foreground sticky left-0 bg-background z-[5]">
                                       <div className="flex items-center gap-2">
                                         <RowHandle id={`sub-${sub.id}`} />
                                         <span className="flex-1">
@@ -468,7 +480,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                                         />
                                       )
                                     )}
-                                    <td className="p-3 text-center font-medium text-muted-foreground sticky right-0 bg-inherit z-[5]">
+                                    <td className="p-3 text-center font-medium text-muted-foreground sticky right-0 bg-background z-[5]">
                                       {calculateRowTotal(
                                         sub.aggregatedTotals
                                       ).toLocaleString()}{" "}
@@ -481,7 +493,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                           </Fragment>
                         ))}
                         <tr className="border-t-2 bg-muted/20">
-                          <td className="p-3 font-bold sticky left-0 bg-muted/20 z-[5]">
+                          <td className="p-3 font-bold sticky left-0 bg-background z-[5]">
                             TOTAL
                           </td>
                           {periods.map((_, periodIdx) => {
@@ -515,7 +527,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                               />
                             );
                           })}
-                          <td className="p-3 text-center font-extrabold sticky right-0 bg-muted/20 z-[5]">
+                          <td className="p-3 text-center font-extrabold sticky right-0 bg-background z-[5]">
                             {filteredMatrix
                               .reduce(
                                 (sum, row) =>
