@@ -139,6 +139,7 @@ export function useMovements(year: number, refreshToken = 0) {
         id: `tmp-${Math.random().toString(36).slice(2)}`,
         user_id: "",
         category_id: vars.categoryId,
+        subcategory_id: null,
         year,
         month: vars.month,
         amount: vars.amount,

@@ -37,6 +37,12 @@ interface ImportResult {
   error?: string;
 }
 
+interface BudgetData {
+  year: number;
+  incomes?: unknown[];
+  expenses?: unknown[];
+}
+
 interface ImportBudgetDialogProps {
   children: React.ReactNode;
   onSuccess?: () => void;
@@ -59,9 +65,9 @@ export function ImportBudgetDialog({
   } = useAllCategories();
 
   const importMutation = useMutation({
-    mutationFn: async (budgetData): Promise<ImportResult> => {
+    mutationFn: async (budgetData: BudgetData): Promise<ImportResult> => {
       const { data, error } = await supabase.functions.invoke("import-budget", {
-        body: budgetData as any,
+        body: budgetData,
       });
 
       if (error) {

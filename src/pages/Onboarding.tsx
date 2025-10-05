@@ -186,7 +186,7 @@ const Onboarding = () => {
           ? {
               ...cat,
               subcategories: Array.from(
-                new Set([...cat.subcategories, trimmed])
+                new Set([...(cat.subcategories ?? []), trimmed])
               ),
             }
           : cat
