@@ -141,7 +141,7 @@ export default function Settings() {
   const [confirm, setConfirm] = useState<{
     open: boolean;
     id: string | null;
-    scope: "income" | "expense" | null;
+    scope: "income" | "expense" | "asset" | null;
   }>({
     open: false,
     id: null,
@@ -369,7 +369,13 @@ export default function Settings() {
                       <div className="flex flex-wrap items-center gap-2">
                         <Button
                           variant="destructive"
-                          onClick={() => void deleteAsset.mutateAsync(cat.id)}
+                          onClick={() =>
+                            setConfirm({
+                              open: true,
+                              id: cat.id,
+                              scope: "asset",
+                            })
+                          }
                         >
                           Eliminar
                         </Button>
@@ -385,16 +391,24 @@ export default function Settings() {
 
       <ConfirmDialog
         open={confirm.open}
-        title="Eliminar categoría"
-        description="Esta acción no se puede deshacer. ¿Seguro que quieres eliminar la categoría?"
+        title={
+          confirm.scope === "asset" ? "Eliminar activo" : "Eliminar categoría"
+        }
+        description={
+          confirm.scope === "asset"
+            ? "Esta acción no se puede deshacer. ¿Seguro que quieres eliminar el activo?"
+            : "Esta acción no se puede deshacer. ¿Seguro que quieres eliminar la categoría?"
+        }
         confirmText="Eliminar"
         cancelText="Cancelar"
         onConfirm={() => {
           if (!confirm.id || !confirm.scope) return;
           if (confirm.scope === "income") {
             void handleDeleteIncome(confirm.id);
-          } else {
+          } else if (confirm.scope === "expense") {
             void handleDeleteExpense(confirm.id);
+          } else if (confirm.scope === "asset") {
+            void deleteAsset.mutateAsync(confirm.id);
           }
         }}
         onClose={() => setConfirm({ open: false, id: null, scope: null })}
