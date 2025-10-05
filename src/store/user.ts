@@ -21,7 +21,7 @@ type UserState = {
   availableYears: number[];
   setYear: (y: number) => Promise<void>;
   refreshAvailableYears: () => Promise<void>;
-  activateYear: (y: number) => Promise<void>;
+  activateYear: (y: number, sourceYear?: number, initialCategory?: { name: string; type: "income" | "expense" | "asset" }) => Promise<void>;
 
   // User data
   userData: UserData | null;
