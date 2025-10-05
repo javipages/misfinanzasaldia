@@ -121,7 +121,7 @@ export function AppSidebar({ onStartTour }: AppSidebarProps = {}) {
   );
 
   return (
-    <Sidebar variant="inset">
+    <Sidebar variant="inset" data-sensitive-skip="true">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2 w-full">
           {!isMobile && (
@@ -131,7 +131,7 @@ export function AppSidebar({ onStartTour }: AppSidebarProps = {}) {
                 void handleYearChange(value);
               }}
             >
-              <SelectTrigger className="flex-1" data-sensitive-skip="true">
+              <SelectTrigger className="flex-1">
                 <SelectValue placeholder="Selecciona un año" />
               </SelectTrigger>
               <SelectContent>
