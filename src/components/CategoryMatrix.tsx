@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   Fragment,
+  useMemo,
 } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,12 +23,16 @@ import { AddValueDialog } from "@/components/ui/add-value-dialog";
 import { ManageEntriesDialog } from "@/components/ui/manage-entries-dialog";
 import { RowHandle } from "@/components/category-matrix/RowHandle";
 import { SortableRow } from "@/components/category-matrix/SortableRow";
-import {
-  calculateColumnTotal,
-  calculateGrandTotal,
-  calculateRowTotal,
-} from "@/components/category-matrix/calculations";
+import { calculateRowTotal } from "@/components/category-matrix/calculations";
 import { LoadingMatrixSkeleton } from "@/components/category-matrix/LoadingMatrixSkeleton";
+import { MatrixControls } from "@/components/category-matrix/MatrixControls";
+import { MatrixCell } from "@/components/category-matrix/MatrixCell";
+import {
+  type PeriodType,
+  getAggregatedPeriods,
+  aggregateData,
+  hasNonZeroValues,
+} from "@/components/category-matrix/aggregation";
 
 import { useUserStore } from "@/store/user";
 import { useCategoryMatrix } from "@/hooks/use-category-matrix";
@@ -146,6 +151,10 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
     const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
       new Set()
     );
+    const [periodType, setPeriodType] = useState<PeriodType>("monthly");
+    const [hideEmptyRows, setHideEmptyRows] = useState(false);
+    const [showHeatmap, setShowHeatmap] = useState(true);
+    const [showVariation, setShowVariation] = useState(false);
 
     const toggleCategory = (categoryId: string) => {
       setExpandedCategories((prev) => {
@@ -159,10 +168,66 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
       });
     };
 
+    // Get aggregated periods based on selected period type
+    const periods = useMemo(
+      () => getAggregatedPeriods(periodType),
+      [periodType]
+    );
+
+    // Calculate aggregated data for each row
+    const aggregatedMatrix = useMemo(() => {
+      return matrix.map((row) => {
+        const aggregatedTotals = periods.map((period) =>
+          aggregateData(row.totals, period)
+        );
+        const aggregatedSubcategories = (row.subcategories ?? []).map(
+          (sub) => ({
+            ...sub,
+            aggregatedTotals: periods.map((period) =>
+              aggregateData(sub.totals, period)
+            ),
+          })
+        );
+        return {
+          ...row,
+          aggregatedTotals,
+          subcategories: aggregatedSubcategories,
+        };
+      });
+    }, [matrix, periods]);
+
+    // Filter out empty rows if hideEmptyRows is enabled
+    const filteredMatrix = useMemo(() => {
+      if (!hideEmptyRows) return aggregatedMatrix;
+      return aggregatedMatrix.filter((row) => {
+        const hasOwnValues = hasNonZeroValues(row.aggregatedTotals);
+        const hasSubValues = (row.subcategories ?? []).some((sub) =>
+          hasNonZeroValues(sub.aggregatedTotals)
+        );
+        return hasOwnValues || hasSubValues;
+      });
+    }, [aggregatedMatrix, hideEmptyRows]);
+
+    // Calculate max value for heatmap
+    const maxValue = useMemo(() => {
+      let max = 0;
+      filteredMatrix.forEach((row) => {
+        row.aggregatedTotals.forEach((val) => {
+          if (val > max) max = val;
+        });
+        (row.subcategories ?? []).forEach((sub) => {
+          sub.aggregatedTotals.forEach((val) => {
+            if (val > max) max = val;
+          });
+        });
+      });
+      return max;
+    }, [filteredMatrix]);
+
     useEffect(() => {
       if (!onStatsRef.current || values.length === 0) return;
       const monthlyTotals = MONTHS.map((_, i) =>
-        calculateColumnTotal(values, i)
+        values.reduce((sum, row) => sum + (row[i] ?? 0), 0)
       );
       const yearTotal = monthlyTotals.reduce((s, v) => s + v, 0);
       const monthlyAverage = yearTotal / 12;
@@ -204,210 +269,269 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
           {isLoading ? (
             <LoadingMatrixSkeleton />
           ) : (
-            <div className="overflow-x-auto">
-              <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-                <SortableContext
-                  items={matrix.map((row) => row.category.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th className="text-left p-3 font-semibold text-foreground min-w-[150px]">
-                          Categoría
-                        </th>
-                        {MONTHS.map((month) => (
-                          <th
-                            key={month}
-                            className="text-center p-3 font-semibold text-foreground min-w-[80px]"
-                          >
-                            {month}
+            <>
+              <MatrixControls
+                periodType={periodType}
+                onPeriodTypeChange={setPeriodType}
+                hideEmptyRows={hideEmptyRows}
+                onHideEmptyRowsChange={setHideEmptyRows}
+                showHeatmap={showHeatmap}
+                onShowHeatmapChange={setShowHeatmap}
+                showVariation={showVariation}
+                onShowVariationChange={setShowVariation}
+              />
+              <div className="overflow-x-auto relative">
+                <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+                  <SortableContext
+                    items={filteredMatrix.map((row) => row.category.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left p-3 font-semibold text-foreground min-w-[150px] sticky left-0 bg-background z-[5]">
+                            Categoría
                           </th>
-                        ))}
-                        <th className="text-center p-3 font-semibold min-w-[100px]">
-                          Total
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {matrix.map((row, rowIdx) => (
-                        <Fragment key={row.category.id}>
-                          <SortableRow
-                            id={row.category.id}
-                            className={rowIdx % 2 === 1 ? "bg-muted/80" : ""}
-                          >
-                            <td className="p-3 font-medium text-foreground">
-                              <div className="flex items-center gap-2">
-                                <RowHandle id={row.category.id} />
-                                {(row.subcategories ?? []).length > 0 && (
-                                  <button
-                                    onClick={() =>
-                                      toggleCategory(row.category.id)
-                                    }
-                                    className="text-muted-foreground hover:text-foreground transition-transform duration-200"
-                                    style={{
-                                      transform: expandedCategories.has(
-                                        row.category.id
-                                      )
-                                        ? "rotate(90deg)"
-                                        : "rotate(0deg)",
-                                    }}
-                                    aria-label={
-                                      expandedCategories.has(row.category.id)
-                                        ? "Colapsar subcategorías"
-                                        : "Expandir subcategorías"
-                                    }
-                                  >
-                                    ▶
-                                  </button>
-                                )}
-                                <span className="flex-1">
-                                  {row.category.name}
-                                </span>
-                                {(row.subcategories ?? []).length > 0 && (
-                                  <span className="text-xs text-muted-foreground">
-                                    ({(row.subcategories ?? []).length})
+                          {periods.map((period, idx) => (
+                            <th
+                              key={idx}
+                              className="text-center p-3 font-semibold text-foreground min-w-[100px]"
+                            >
+                              {period.label}
+                            </th>
+                          ))}
+                          <th className="text-center p-3 font-semibold min-w-[100px] sticky right-0 bg-background z-[5]">
+                            Total
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredMatrix.map((row, rowIdx) => (
+                          <Fragment key={row.category.id}>
+                            <SortableRow
+                              id={row.category.id}
+                              className={rowIdx % 2 === 1 ? "bg-muted/80" : ""}
+                            >
+                              <td className="p-3 font-medium text-foreground sticky left-0 bg-inherit z-[5]">
+                                <div className="flex items-center gap-2">
+                                  <RowHandle id={row.category.id} />
+                                  {(row.subcategories ?? []).length > 0 && (
+                                    <button
+                                      onClick={() =>
+                                        toggleCategory(row.category.id)
+                                      }
+                                      className="text-muted-foreground hover:text-foreground transition-transform duration-200"
+                                      style={{
+                                        transform: expandedCategories.has(
+                                          row.category.id
+                                        )
+                                          ? "rotate(90deg)"
+                                          : "rotate(0deg)",
+                                      }}
+                                      aria-label={
+                                        expandedCategories.has(row.category.id)
+                                          ? "Colapsar subcategorías"
+                                          : "Expandir subcategorías"
+                                      }
+                                    >
+                                      ▶
+                                    </button>
+                                  )}
+                                  <span className="flex-1">
+                                    {row.category.name}
                                   </span>
-                                )}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="shrink-0 hidden md:inline-flex"
-                                  onClick={() => {
-                                    setPreset({
-                                      categoryId: row.category.id,
-                                      subcategoryId: null,
-                                      month: null,
-                                    });
-                                    setAddOpen(true);
-                                  }}
-                                >
-                                  +
-                                </Button>
-                              </div>
-                            </td>
+                                  {(row.subcategories ?? []).length > 0 && (
+                                    <span className="text-xs text-muted-foreground">
+                                      ({(row.subcategories ?? []).length})
+                                    </span>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="shrink-0 hidden md:inline-flex"
+                                    onClick={() => {
+                                      setPreset({
+                                        categoryId: row.category.id,
+                                        subcategoryId: null,
+                                        month: null,
+                                      });
+                                      setAddOpen(true);
+                                    }}
+                                  >
+                                    +
+                                  </Button>
+                                </div>
+                              </td>
 
-                            {MONTHS.map((_, monthIndex) => (
-                              <td key={monthIndex} className="p-1 text-center">
-                                <div
-                                  className="p-2 rounded cursor-pointer hover:bg-muted/50 font-medium"
+                              {row.aggregatedTotals.map((value, periodIdx) => (
+                                <MatrixCell
+                                  key={periodIdx}
+                                  value={value}
+                                  previousValue={
+                                    showVariation && periodIdx > 0
+                                      ? row.aggregatedTotals[periodIdx - 1]
+                                      : undefined
+                                  }
+                                  maxValue={maxValue}
+                                  kind={kind}
+                                  showHeatmap={showHeatmap}
+                                  showVariation={showVariation}
                                   onClick={() => {
+                                    // For aggregated periods, open dialog with first month of period
+                                    const firstMonth =
+                                      periods[periodIdx].monthIndices[0];
                                     setManageCtx({
                                       categoryId: row.category.id,
                                       categoryName: row.category.name,
                                       subcategoryId: null,
                                       subcategoryName: null,
-                                      month: monthIndex + 1,
+                                      month: firstMonth + 1,
                                     });
                                     setManageOpen(true);
                                   }}
-                                >
-                                  €
-                                  {Number(
-                                    row.totals[monthIndex] ?? 0
-                                  ).toLocaleString()}
-                                </div>
+                                />
+                              ))}
+                              <td className="p-3 text-center font-bold sticky right-0 bg-inherit z-[5]">
+                                {calculateRowTotal(
+                                  row.aggregatedTotals
+                                ).toLocaleString()}{" "}
+                                €
                               </td>
-                            ))}
-                            <td className="p-3 text-center font-bold">
-                              €{calculateRowTotal(row.totals).toLocaleString()}
-                            </td>
-                          </SortableRow>
+                            </SortableRow>
 
-                          {expandedCategories.has(row.category.id) && (
-                            <SortableContext
-                              items={(row.subcategories ?? []).map(
-                                (s) => `sub-${s.id}`
-                              )}
-                              strategy={verticalListSortingStrategy}
-                            >
-                              {(row.subcategories ?? []).map((sub) => (
-                                <SortableRow
-                                  id={`sub-${sub.id}`}
-                                  key={sub.id}
-                                  className="border-b border-border/50 bg-muted/20"
-                                >
-                                  <td className="p-3 pl-6 text-sm text-muted-foreground">
-                                    <div className="flex items-center gap-2">
-                                      <RowHandle id={`sub-${sub.id}`} />
-                                      <span className="flex-1">{sub.name}</span>
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="shrink-0 hidden md:inline-flex"
-                                        onClick={() => {
-                                          setPreset({
-                                            categoryId: row.category.id,
-                                            subcategoryId: sub.id,
-                                            month: null,
-                                          });
-                                          setAddOpen(true);
-                                        }}
-                                      >
-                                        +
-                                      </Button>
-                                    </div>
-                                  </td>
-                                  {MONTHS.map((_, monthIndex) => (
-                                    <td
-                                      key={monthIndex}
-                                      className="p-1 text-center"
-                                    >
-                                      <div
-                                        className="p-2 rounded cursor-pointer hover:bg-muted/40 text-sm"
-                                        onClick={() => {
-                                          setManageCtx({
-                                            categoryId: row.category.id,
-                                            categoryName: row.category.name,
-                                            subcategoryId: sub.id,
-                                            subcategoryName: sub.name,
-                                            month: monthIndex + 1,
-                                          });
-                                          setManageOpen(true);
-                                        }}
-                                      >
-                                        €
-                                        {Number(
-                                          sub.totals[monthIndex] ?? 0
-                                        ).toLocaleString()}
+                            {expandedCategories.has(row.category.id) && (
+                              <SortableContext
+                                items={(row.subcategories ?? []).map(
+                                  (s) => `sub-${s.id}`
+                                )}
+                                strategy={verticalListSortingStrategy}
+                              >
+                                {(row.subcategories ?? []).map((sub) => (
+                                  <SortableRow
+                                    id={`sub-${sub.id}`}
+                                    key={sub.id}
+                                    className="border-b border-border/50 bg-muted/20"
+                                  >
+                                    <td className="p-3 pl-6 text-sm text-muted-foreground sticky left-0 bg-inherit z-[5]">
+                                      <div className="flex items-center gap-2">
+                                        <RowHandle id={`sub-${sub.id}`} />
+                                        <span className="flex-1">
+                                          {sub.name}
+                                        </span>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="shrink-0 hidden md:inline-flex"
+                                          onClick={() => {
+                                            setPreset({
+                                              categoryId: row.category.id,
+                                              subcategoryId: sub.id,
+                                              month: null,
+                                            });
+                                            setAddOpen(true);
+                                          }}
+                                        >
+                                          +
+                                        </Button>
                                       </div>
                                     </td>
-                                  ))}
-                                  <td className="p-3 text-center font-medium text-muted-foreground">
-                                    €
-                                    {calculateRowTotal(
-                                      sub.totals
-                                    ).toLocaleString()}
-                                  </td>
-                                </SortableRow>
-                              ))}
-                            </SortableContext>
-                          )}
-                        </Fragment>
-                      ))}
-                      <tr className="border-t-2 bg-muted/20">
-                        <td className="p-3 font-bold">TOTAL</td>
-                        {MONTHS.map((_, monthIndex) => (
-                          <td
-                            key={monthIndex}
-                            className="p-3 text-center font-bold"
-                          >
-                            €
-                            {calculateColumnTotal(
-                              values,
-                              monthIndex
-                            ).toLocaleString()}
-                          </td>
+                                    {sub.aggregatedTotals.map(
+                                      (value, periodIdx) => (
+                                        <MatrixCell
+                                          key={periodIdx}
+                                          value={value}
+                                          previousValue={
+                                            showVariation && periodIdx > 0
+                                              ? sub.aggregatedTotals[
+                                                  periodIdx - 1
+                                                ]
+                                              : undefined
+                                          }
+                                          maxValue={maxValue}
+                                          kind={kind}
+                                          showHeatmap={showHeatmap}
+                                          showVariation={showVariation}
+                                          onClick={() => {
+                                            const firstMonth =
+                                              periods[periodIdx]
+                                                .monthIndices[0];
+                                            setManageCtx({
+                                              categoryId: row.category.id,
+                                              categoryName: row.category.name,
+                                              subcategoryId: sub.id,
+                                              subcategoryName: sub.name,
+                                              month: firstMonth + 1,
+                                            });
+                                            setManageOpen(true);
+                                          }}
+                                          className="text-sm"
+                                        />
+                                      )
+                                    )}
+                                    <td className="p-3 text-center font-medium text-muted-foreground sticky right-0 bg-inherit z-[5]">
+                                      {calculateRowTotal(
+                                        sub.aggregatedTotals
+                                      ).toLocaleString()}{" "}
+                                      €
+                                    </td>
+                                  </SortableRow>
+                                ))}
+                              </SortableContext>
+                            )}
+                          </Fragment>
                         ))}
-                        <td className="p-3 text-center font-extrabold">
-                          €{calculateGrandTotal(values).toLocaleString()}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </SortableContext>
-              </DndContext>
-            </div>
+                        <tr className="border-t-2 bg-muted/20">
+                          <td className="p-3 font-bold sticky left-0 bg-muted/20 z-[5]">
+                            TOTAL
+                          </td>
+                          {periods.map((_, periodIdx) => {
+                            const total = filteredMatrix.reduce(
+                              (sum, row) =>
+                                sum + (row.aggregatedTotals[periodIdx] ?? 0),
+                              0
+                            );
+                            const prevTotal =
+                              periodIdx > 0
+                                ? filteredMatrix.reduce(
+                                    (sum, row) =>
+                                      sum +
+                                      (row.aggregatedTotals[periodIdx - 1] ??
+                                        0),
+                                    0
+                                  )
+                                : undefined;
+                            return (
+                              <MatrixCell
+                                key={periodIdx}
+                                value={total}
+                                previousValue={
+                                  showVariation ? prevTotal : undefined
+                                }
+                                maxValue={maxValue}
+                                kind={kind}
+                                showHeatmap={false}
+                                showVariation={showVariation}
+                                className="font-bold"
+                              />
+                            );
+                          })}
+                          <td className="p-3 text-center font-extrabold sticky right-0 bg-muted/20 z-[5]">
+                            {filteredMatrix
+                              .reduce(
+                                (sum, row) =>
+                                  sum + calculateRowTotal(row.aggregatedTotals),
+                                0
+                              )
+                              .toLocaleString()}{" "}
+                            €
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </SortableContext>
+                </DndContext>
+              </div>
+            </>
           )}
         </div>
         <AddValueDialog
