@@ -64,6 +64,7 @@ import {
   useMovementsFilter,
   type SortField,
 } from "@/hooks/use-movements-filter";
+import { MONTHS } from "@/utils/constants";
 
 const Movements = () => {
   const year = useUserStore((s) => s.year);

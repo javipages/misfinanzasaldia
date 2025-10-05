@@ -17,15 +17,20 @@ import {
 import {
   SortableContext,
   verticalListSortingStrategy,
-  useSortable,
 } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { AddValueDialog } from "@/components/ui/add-value-dialog";
 import { ManageEntriesDialog } from "@/components/ui/manage-entries-dialog";
+import { RowHandle } from "@/components/category-matrix/RowHandle";
+import { SortableRow } from "@/components/category-matrix/SortableRow";
+import {
+  calculateColumnTotal,
+  calculateGrandTotal,
+  calculateRowTotal,
+} from "@/components/category-matrix/calculations";
+import { LoadingMatrixSkeleton } from "@/components/category-matrix/LoadingMatrixSkeleton";
 
 import { useUserStore } from "@/store/user";
 import { useCategoryMatrix } from "@/hooks/use-category-matrix";
-import { Skeleton } from "@/components/ui/skeleton";
 import { MONTHS } from "@/utils/constants";
 
 export type CategoryMatrixRef = {
@@ -69,49 +74,6 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
     const sensors = useSensors(
       useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
     );
-
-    function RowHandle({ id }: { id: string }) {
-      const { attributes, listeners } = useSortable({ id });
-      return (
-        <button
-          aria-label="Mover"
-          className="cursor-grab px-1"
-          {...attributes}
-          {...listeners}
-        >
-          ≡
-        </button>
-      );
-    }
-    console.log(matrix);
-    function SortableRow({
-      id,
-      children,
-      className = "",
-    }: {
-      id: string;
-      children: React.ReactNode;
-      className?: string;
-    }) {
-      const { setNodeRef, transform, transition, isDragging } = useSortable({
-        id,
-      });
-      const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.6 : 1,
-      } as React.CSSProperties;
-      return (
-        <tr
-          ref={setNodeRef}
-          style={style}
-          id={id}
-          className={`border-b border-border/50 hover:bg-muted/30 ${className}`}
-        >
-          {children}
-        </tr>
-      );
-    }
 
     function onDragEnd(event: DragEndEvent) {
       const { active, over } = event;
@@ -165,13 +127,6 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
       });
     };
 
-    const calculateRowTotal = (data: number[]) =>
-      data.reduce((s, v) => s + v, 0);
-    const calculateColumnTotal = (all: number[][], monthIndex: number) =>
-      all.reduce((sum, row) => sum + row[monthIndex], 0);
-    const calculateGrandTotal = (all: number[][]) =>
-      all.reduce((sum, row) => sum + calculateRowTotal(row), 0);
-
     useEffect(() => {
       if (!onStatsRef.current || values.length === 0) return;
       const monthlyTotals = MONTHS.map((_, i) =>
@@ -215,62 +170,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
         </div>
         <div>
           {isLoading ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="p-3 text-left">
-                      <Skeleton className="h-4 w-32" />
-                    </th>
-                    {MONTHS.map((month) => (
-                      <th key={month} className="p-3 text-center">
-                        <Skeleton className="h-4 w-16 mx-auto" />
-                      </th>
-                    ))}
-                    <th className="p-3 text-center">
-                      <Skeleton className="h-4 w-20 mx-auto" />
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Array.from({ length: 4 }).map((_, rowIdx) => (
-                    <tr
-                      key={`loading-row-${rowIdx}`}
-                      className="border-b border-border/50"
-                    >
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-4 w-4" />
-                          <Skeleton className="h-4 w-36" />
-                          <Skeleton className="h-6 w-6 hidden md:block" />
-                        </div>
-                      </td>
-                      {MONTHS.map((month) => (
-                        <td key={`${month}-${rowIdx}`} className="p-2">
-                          <Skeleton className="h-6 w-full" />
-                        </td>
-                      ))}
-                      <td className="p-3 text-center">
-                        <Skeleton className="h-6 w-16 mx-auto" />
-                      </td>
-                    </tr>
-                  ))}
-                  <tr className="border-t-2 border-border bg-muted/20">
-                    <td className="p-3">
-                      <Skeleton className="h-4 w-20" />
-                    </td>
-                    {MONTHS.map((month) => (
-                      <td key={`total-${month}`} className="p-3">
-                        <Skeleton className="h-4 w-12 mx-auto" />
-                      </td>
-                    ))}
-                    <td className="p-3 text-center">
-                      <Skeleton className="h-4 w-16 mx-auto" />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <LoadingMatrixSkeleton />
           ) : (
             <div className="overflow-x-auto">
               <DndContext sensors={sensors} onDragEnd={onDragEnd}>
