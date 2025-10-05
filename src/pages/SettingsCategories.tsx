@@ -423,16 +423,10 @@ export default function SettingsCategories() {
       <ConfirmDialog
         open={confirm.open}
         title={
-          confirm.scope === "asset"
-            ? "Eliminar activo"
-            : confirm.subcategoryId
-            ? "Eliminar subcategoría"
-            : "Eliminar categoría"
+          confirm.subcategoryId ? "Eliminar subcategoría" : "Eliminar categoría"
         }
         description={
-          confirm.scope === "asset"
-            ? "Esta acción no se puede deshacer. ¿Seguro que quieres eliminar el activo?"
-            : confirm.subcategoryId
+          confirm.subcategoryId
             ? "Esta acción no se puede deshacer. ¿Seguro que quieres eliminar la subcategoría?"
             : "Esta acción no se puede deshacer. ¿Seguro que quieres eliminar la categoría?"
         }
