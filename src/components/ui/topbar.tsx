@@ -1,12 +1,27 @@
-import { PanelLeftIcon, Grid3X3, Table, HelpCircle, Eye, EyeOff } from "lucide-react";
+import {
+  PanelLeftIcon,
+  Grid3X3,
+  Table,
+  HelpCircle,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useUserStore } from "@/store/user";
 import { useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useViewMode } from "@/store/viewModeStore";
 import { useLocation } from "react-router-dom";
 import { usePrivacyStore } from "@/store/privacyStore";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AddYearDialog } from "@/components/ui/add-year-dialog";
 
 interface TopbarProps {
   onStartTour?: () => void;
@@ -15,12 +30,52 @@ interface TopbarProps {
 export function Topbar({ onStartTour }: TopbarProps = {}) {
   const isMobile = useIsMobile();
   const year = useUserStore((s) => s.year);
+  const availableYears = useUserStore((s) => s.availableYears);
   const setYear = useUserStore((s) => s.setYear);
+  const refreshAvailableYears = useUserStore((s) => s.refreshAvailableYears);
+  const activateYear = useUserStore((s) => s.activateYear);
   const { toggleSidebar } = useSidebar();
   const { viewMode, setViewMode } = useViewMode();
   const location = useLocation();
   const maskNumbers = usePrivacyStore((s) => s.maskNumbers);
   const toggleMaskNumbers = usePrivacyStore((s) => s.toggleMaskNumbers);
+  const [addYearDialogOpen, setAddYearDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (isMobile) {
+      void refreshAvailableYears();
+    }
+  }, [isMobile, refreshAvailableYears]);
+
+  const yearOptions = useMemo(() => {
+    return availableYears.length > 0 ? availableYears : [year];
+  }, [availableYears, year]);
+
+  const handleYearChange = useCallback(
+    async (value: string) => {
+      if (value === "__new") {
+        setAddYearDialogOpen(true);
+        return;
+      }
+
+      const parsed = Number(value);
+      if (!Number.isNaN(parsed)) {
+        void setYear(parsed);
+      }
+    },
+    [setYear]
+  );
+
+  const handleAddYearConfirm = useCallback(
+    async (
+      newYear: number,
+      sourceYear: number | null,
+      initialCategory?: { name: string; type: "income" | "expense" | "asset" }
+    ) => {
+      await activateYear(newYear, sourceYear ?? undefined, initialCategory);
+    },
+    [activateYear]
+  );
 
   // No mostrar en desktop
   if (!isMobile) {
@@ -40,18 +95,24 @@ export function Topbar({ onStartTour }: TopbarProps = {}) {
       </Button>
 
       <div className="flex items-center gap-2 flex-1">
-        <Input
-          type="number"
-          min={2000}
-          max={3000}
-          value={year}
-          onChange={(e) => {
-            const v = Number(e.target.value || new Date().getFullYear());
-            void setYear(v);
+        <Select
+          value={String(year)}
+          onValueChange={(value) => {
+            void handleYearChange(value);
           }}
-          className="w-24"
-        />
-        <span className="text-sm text-muted-foreground">Año</span>
+        >
+          <SelectTrigger className="w-24" data-sensitive-skip="true">
+            <SelectValue placeholder="Año" />
+          </SelectTrigger>
+          <SelectContent>
+            {yearOptions.map((availableYear) => (
+              <SelectItem key={availableYear} value={String(availableYear)}>
+                {availableYear}
+              </SelectItem>
+            ))}
+            <SelectItem value="__new">Añadir año…</SelectItem>
+          </SelectContent>
+        </Select>
         {onStartTour && (
           <Button
             variant="ghost"
@@ -103,6 +164,13 @@ export function Topbar({ onStartTour }: TopbarProps = {}) {
           </>
         )}
       </div>
+      <AddYearDialog
+        open={addYearDialogOpen}
+        onClose={() => setAddYearDialogOpen(false)}
+        onConfirm={handleAddYearConfirm}
+        availableYears={availableYears}
+        suggestedYear={Math.max(...yearOptions, new Date().getFullYear()) + 1}
+      />
     </div>
   );
 }
