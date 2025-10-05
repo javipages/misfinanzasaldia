@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { type MovementType } from "@/hooks/use-movements";
+import { MONTHS } from "@/utils/constants";
 
 type Category = { id: string; name: string };
 
@@ -34,21 +35,6 @@ type Props = {
   }) => Promise<void> | void;
   onClose: () => void;
 };
-
-const MONTHS = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
-];
 
 export function AddMovementDialog({
   open,

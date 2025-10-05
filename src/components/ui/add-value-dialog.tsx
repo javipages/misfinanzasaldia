@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MONTHS } from "@/utils/constants";
 
 type CategoryOption = {
   id: string;
@@ -34,21 +35,6 @@ type Props = {
   }) => Promise<void> | void;
   onClose: () => void;
 };
-
-const MONTHS = [
-  "Ene",
-  "Feb",
-  "Mar",
-  "Abr",
-  "May",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dic",
-];
 
 export function AddValueDialog({
   open,

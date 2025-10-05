@@ -26,6 +26,7 @@ import { ManageEntriesDialog } from "@/components/ui/manage-entries-dialog";
 import { useUserStore } from "@/store/user";
 import { useCategoryMatrix } from "@/hooks/use-category-matrix";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MONTHS } from "@/utils/constants";
 
 export type CategoryMatrixRef = {
   openAddDialog: (
@@ -45,21 +46,6 @@ type Props = {
     bestMonth: { index: number; amount: number };
   }) => void;
 };
-
-const MONTHS = [
-  "Ene",
-  "Feb",
-  "Mar",
-  "Abr",
-  "May",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dic",
-] as const;
 
 export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
   function CategoryMatrix({ kind, year, onStatsChange }: Props, ref) {

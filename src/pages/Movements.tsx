@@ -65,21 +65,6 @@ import {
   type SortField,
 } from "@/hooks/use-movements-filter";
 
-const MONTHS = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
-];
-
 const Movements = () => {
   const year = useUserStore((s) => s.year);
   const [refreshKey, setRefreshKey] = useState(0);

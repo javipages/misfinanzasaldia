@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MONTHS } from "@/utils/constants";
 
 export type EditableEntry = {
   id: string;
@@ -26,21 +27,6 @@ type Props = {
   onDelete: (id: string) => Promise<void> | void;
   onClose: () => void;
 };
-
-const MONTHS = [
-  "Ene",
-  "Feb",
-  "Mar",
-  "Abr",
-  "May",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dic",
-];
 
 export function ManageEntriesDialog({
   open,
@@ -85,7 +71,11 @@ export function ManageEntriesDialog({
           <h2 className="text-lg font-semibold">
             {title} · {context} · {MONTHS[month - 1]}
           </h2>
-          <Button variant="outline" onClick={onClose} className="self-end sm:self-auto">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="self-end sm:self-auto"
+          >
             Cerrar
           </Button>
         </div>
