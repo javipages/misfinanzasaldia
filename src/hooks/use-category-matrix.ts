@@ -14,6 +14,8 @@ import {
   type EntryRow,
   updateIncomeCategory,
   updateExpenseCategory,
+  updateIncomeSubcategory,
+  updateExpenseSubcategory,
 } from "@/integrations/supabase/categories";
 import { useUserStore } from "@/store/user";
 
@@ -293,6 +295,83 @@ export function useCategoryMatrix(kind: Kind, year: number) {
     },
   });
 
+  const swapSuborder = useMutation({
+    mutationFn: async ({
+      categoryId,
+      aId,
+      aOrder,
+      bOrder,
+    }: {
+      categoryId: string;
+      aId: string;
+      aOrder: number;
+      bOrder: number;
+    }) => {
+      if (aOrder === bOrder) return;
+      const categories = [...(categoriesQuery.data ?? [])];
+      const category = categories.find((c) => c.id === categoryId);
+      if (!category) return;
+      const ordered = (category.subcategories ?? [])
+        .slice()
+        .sort((a, b) => a.display_order - b.display_order);
+
+      const fromIndex = aOrder - 1;
+      const toIndex = bOrder - 1;
+      const moving = ordered.find((s) => s.id === aId);
+      if (!moving) return;
+      ordered.splice(fromIndex, 1);
+      ordered.splice(toIndex, 0, moving);
+
+      const updates = ordered.map((sub, idx) => ({
+        id: sub.id,
+        display_order: idx + 1,
+      }));
+
+      if (kind === "income") {
+        await Promise.all(
+          updates.map((u) => updateIncomeSubcategory(u.id, { display_order: u.display_order }, year))
+        );
+      } else {
+        await Promise.all(
+          updates.map((u) => updateExpenseSubcategory(u.id, { display_order: u.display_order }, year))
+        );
+      }
+    },
+    onMutate: async ({ categoryId, aId, aOrder, bOrder }) => {
+      await qc.cancelQueries({ queryKey: QK.categories(kind, year) });
+      const prev = qc.getQueryData<MatrixCategory[]>(QK.categories(kind, year));
+      if (prev) {
+        const next = prev.map((cat) => {
+          if (cat.id !== categoryId) return cat;
+          const ordered = (cat.subcategories ?? [])
+            .slice()
+            .sort((a, b) => a.display_order - b.display_order);
+          const fromIndex = aOrder - 1;
+          const toIndex = bOrder - 1;
+          const moving = ordered.find((s) => s.id === aId);
+          if (!moving || fromIndex === toIndex) return cat;
+          ordered.splice(fromIndex, 1);
+          ordered.splice(toIndex, 0, moving);
+          return {
+            ...cat,
+            subcategories: ordered.map((s, idx) => ({
+              ...s,
+              display_order: idx + 1,
+            })),
+          };
+        });
+        qc.setQueryData(QK.categories(kind, year), next);
+      }
+      return { prev } as const;
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(QK.categories(kind, year), ctx.prev);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: QK.categories(kind, year) });
+    },
+  });
+
   const addEntry = useMutation({
     mutationFn: async ({
       categoryId,
@@ -452,5 +531,6 @@ export function useCategoryMatrix(kind: Kind, year: number) {
     updateEntry,
     deleteEntry,
     swapOrder,
+    swapSuborder,
   };
 }

@@ -70,6 +70,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
       updateEntry,
       deleteEntry,
       swapOrder,
+      swapSuborder,
     } = useCategoryMatrix(kind, resolvedYear);
     const sensors = useSensors(
       useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -78,18 +79,49 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
     function onDragEnd(event: DragEndEvent) {
       const { active, over } = event;
       if (!over || active.id === over.id) return;
+      const activeId = String(active.id);
+      const overId = String(over.id);
+
+      // Case 1: Category drag (ids are raw category ids)
       const current = categories;
-      const fromIdx = current.findIndex((r) => r.id === String(active.id));
-      const toIdx = current.findIndex((r) => r.id === String(over.id));
-      if (fromIdx < 0 || toIdx < 0) return;
-      const a = current[fromIdx];
-      const b = current[toIdx];
-      void swapOrder.mutateAsync({
-        aId: a.id,
-        aOrder: a.display_order,
-        bId: b.id,
-        bOrder: b.display_order,
-      });
+      const fromIdx = current.findIndex((r) => r.id === activeId);
+      const toIdx = current.findIndex((r) => r.id === overId);
+      if (fromIdx >= 0 && toIdx >= 0) {
+        const a = current[fromIdx];
+        const b = current[toIdx];
+        swapOrder.mutate({
+          aId: a.id,
+          aOrder: a.display_order,
+          bId: b.id,
+          bOrder: b.display_order,
+        });
+        return;
+      }
+
+      // Case 2: Subcategory drag (ids are prefixed as `sub-<id>`)
+      if (activeId.startsWith("sub-") && overId.startsWith("sub-")) {
+        const subA = activeId.slice(4);
+        const subB = overId.slice(4);
+        // Find the category that contains both subcategories
+        const parent = matrix.find((row) =>
+          (row.subcategories ?? []).some((s) => s.id === subA || s.id === subB)
+        );
+        if (!parent) return;
+        const ordered = (parent.subcategories ?? [])
+          .slice()
+          .sort((a, b) => a.display_order - b.display_order);
+        const aIdx = ordered.findIndex((s) => s.id === subA);
+        const bIdx = ordered.findIndex((s) => s.id === subB);
+        if (aIdx < 0 || bIdx < 0) return;
+        const a = ordered[aIdx];
+        const b = ordered[bIdx];
+        swapSuborder.mutate({
+          categoryId: parent.category.id,
+          aId: a.id,
+          aOrder: a.display_order,
+          bOrder: b.display_order,
+        });
+      }
     }
     const [addOpen, setAddOpen] = useState(false);
     const [preset, setPreset] = useState<{
@@ -282,66 +314,75 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                             </td>
                           </SortableRow>
 
-                          {expandedCategories.has(row.category.id) &&
-                            (row.subcategories ?? []).map((sub) => (
-                              <tr
-                                key={sub.id}
-                                className="border-b border-border/50 bg-muted/20"
-                              >
-                                <td className="p-3 pl-10 text-sm text-muted-foreground">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs">•</span>
-                                    <span className="flex-1">{sub.name}</span>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="shrink-0 hidden md:inline-flex"
-                                      onClick={() => {
-                                        setPreset({
-                                          categoryId: row.category.id,
-                                          subcategoryId: sub.id,
-                                          month: null,
-                                        });
-                                        setAddOpen(true);
-                                      }}
-                                    >
-                                      +
-                                    </Button>
-                                  </div>
-                                </td>
-                                {MONTHS.map((_, monthIndex) => (
-                                  <td
-                                    key={monthIndex}
-                                    className="p-1 text-center"
-                                  >
-                                    <div
-                                      className="p-2 rounded cursor-pointer hover:bg-muted/40 text-sm"
-                                      onClick={() => {
-                                        setManageCtx({
-                                          categoryId: row.category.id,
-                                          categoryName: row.category.name,
-                                          subcategoryId: sub.id,
-                                          subcategoryName: sub.name,
-                                          month: monthIndex + 1,
-                                        });
-                                        setManageOpen(true);
-                                      }}
-                                    >
-                                      €
-                                      {Number(
-                                        sub.totals[monthIndex] ?? 0
-                                      ).toLocaleString()}
+                          {expandedCategories.has(row.category.id) && (
+                            <SortableContext
+                              items={(row.subcategories ?? []).map(
+                                (s) => `sub-${s.id}`
+                              )}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              {(row.subcategories ?? []).map((sub) => (
+                                <SortableRow
+                                  id={`sub-${sub.id}`}
+                                  key={sub.id}
+                                  className="border-b border-border/50 bg-muted/20"
+                                >
+                                  <td className="p-3 pl-6 text-sm text-muted-foreground">
+                                    <div className="flex items-center gap-2">
+                                      <RowHandle id={`sub-${sub.id}`} />
+                                      <span className="flex-1">{sub.name}</span>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="shrink-0 hidden md:inline-flex"
+                                        onClick={() => {
+                                          setPreset({
+                                            categoryId: row.category.id,
+                                            subcategoryId: sub.id,
+                                            month: null,
+                                          });
+                                          setAddOpen(true);
+                                        }}
+                                      >
+                                        +
+                                      </Button>
                                     </div>
                                   </td>
-                                ))}
-                                <td className="p-3 text-center font-medium text-muted-foreground">
-                                  €
-                                  {calculateRowTotal(
-                                    sub.totals
-                                  ).toLocaleString()}
-                                </td>
-                              </tr>
-                            ))}
+                                  {MONTHS.map((_, monthIndex) => (
+                                    <td
+                                      key={monthIndex}
+                                      className="p-1 text-center"
+                                    >
+                                      <div
+                                        className="p-2 rounded cursor-pointer hover:bg-muted/40 text-sm"
+                                        onClick={() => {
+                                          setManageCtx({
+                                            categoryId: row.category.id,
+                                            categoryName: row.category.name,
+                                            subcategoryId: sub.id,
+                                            subcategoryName: sub.name,
+                                            month: monthIndex + 1,
+                                          });
+                                          setManageOpen(true);
+                                        }}
+                                      >
+                                        €
+                                        {Number(
+                                          sub.totals[monthIndex] ?? 0
+                                        ).toLocaleString()}
+                                      </div>
+                                    </td>
+                                  ))}
+                                  <td className="p-3 text-center font-medium text-muted-foreground">
+                                    €
+                                    {calculateRowTotal(
+                                      sub.totals
+                                    ).toLocaleString()}
+                                  </td>
+                                </SortableRow>
+                              ))}
+                            </SortableContext>
+                          )}
                         </Fragment>
                       ))}
                       <tr className="border-t-2 bg-muted/20">
