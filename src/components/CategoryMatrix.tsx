@@ -313,7 +313,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                               className={rowIdx % 2 === 1 ? "bg-muted/80" : ""}
                             >
                               <td
-                                className={`p-3 font-medium text-foreground sticky left-0 z-[5] ${
+                                className={`p-3 font-medium text-foreground sticky left-0 z-[5] group-hover/row:bg-muted ${
                                   rowIdx % 2 === 1
                                     ? "bg-muted"
                                     : "bg-background"
@@ -398,7 +398,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                                 />
                               ))}
                               <td
-                                className={`p-3 text-center font-bold sticky right-0 z-[5] ${
+                                className={`p-3 text-center font-bold sticky right-0 z-[5] group-hover/row:bg-muted ${
                                   rowIdx % 2 === 1
                                     ? "bg-muted"
                                     : "bg-background"
@@ -424,7 +424,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                                     key={sub.id}
                                     className="border-b border-border/50 bg-muted/20"
                                   >
-                                    <td className="p-3 pl-6 text-sm text-muted-foreground sticky left-0 bg-background z-[5]">
+                                    <td className="p-3 pl-6 text-sm text-muted-foreground sticky left-0 bg-background group-hover/row:bg-muted z-[5]">
                                       <div className="flex items-center gap-2">
                                         <RowHandle id={`sub-${sub.id}`} />
                                         <span className="flex-1">
@@ -480,7 +480,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                                         />
                                       )
                                     )}
-                                    <td className="p-3 text-center font-medium text-muted-foreground sticky right-0 bg-background z-[5]">
+                                    <td className="p-3 text-center font-medium text-muted-foreground sticky right-0 bg-background group-hover/row:bg-muted z-[5]">
                                       {calculateRowTotal(
                                         sub.aggregatedTotals
                                       ).toLocaleString()}{" "}

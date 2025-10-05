@@ -25,7 +25,7 @@ export function SortableRow({
       ref={setNodeRef}
       style={style}
       id={id}
-      className={`border-b border-border/50 hover:bg-muted/30 ${className}`}
+      className={`border-b border-border/50 group/row hover:bg-muted/30 ${className}`}
     >
       {children}
     </tr>
