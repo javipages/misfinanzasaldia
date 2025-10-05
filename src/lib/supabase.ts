@@ -176,6 +176,76 @@ export type Database = {
           },
         ]
       }
+      expense_subcategories: {
+        Row: {
+          category_id: string
+          created_at: string
+          display_order: number
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          name: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_subcategories_years: {
+        Row: {
+          created_at: string
+          id: string
+          subcategory_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          subcategory_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          subcategory_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_subcategories_years_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "expense_subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expense_entries: {
         Row: {
           amount: number
@@ -184,6 +254,7 @@ export type Database = {
           description: string | null
           id: string
           month: number
+          subcategory_id: string | null
           updated_at: string
           user_id: string
           year: number
@@ -195,6 +266,7 @@ export type Database = {
           description?: string | null
           id?: string
           month: number
+          subcategory_id?: string | null
           updated_at?: string
           user_id?: string
           year: number
@@ -206,6 +278,7 @@ export type Database = {
           description?: string | null
           id?: string
           month?: number
+          subcategory_id?: string | null
           updated_at?: string
           user_id?: string
           year?: number
@@ -216,6 +289,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_entries_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "expense_subcategories"
             referencedColumns: ["id"]
           },
         ]
@@ -321,6 +401,76 @@ export type Database = {
           },
         ]
       }
+      income_subcategories: {
+        Row: {
+          category_id: string
+          created_at: string
+          display_order: number
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          name: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "income_subcategories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "income_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      income_subcategories_years: {
+        Row: {
+          created_at: string
+          id: string
+          subcategory_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          subcategory_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          subcategory_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "income_subcategories_years_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "income_subcategories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       income_entries: {
         Row: {
           amount: number
@@ -329,6 +479,7 @@ export type Database = {
           description: string | null
           id: string
           month: number
+          subcategory_id: string | null
           updated_at: string
           user_id: string
           year: number
@@ -340,6 +491,7 @@ export type Database = {
           description?: string | null
           id?: string
           month: number
+          subcategory_id?: string | null
           updated_at?: string
           user_id?: string
           year: number
@@ -351,6 +503,7 @@ export type Database = {
           description?: string | null
           id?: string
           month?: number
+          subcategory_id?: string | null
           updated_at?: string
           user_id?: string
           year?: number
@@ -361,6 +514,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "income_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "income_entries_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "income_subcategories"
             referencedColumns: ["id"]
           },
         ]

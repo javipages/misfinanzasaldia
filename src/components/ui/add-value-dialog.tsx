@@ -9,19 +9,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type Category = { id: string; name: string };
+type CategoryOption = {
+  id: string;
+  name: string;
+  subcategories: { id: string; name: string }[];
+};
 
 type Props = {
   open: boolean;
   kind: "income" | "expense";
-  categories: Category[];
+  categories: CategoryOption[];
   defaultCategoryId?: string | null;
+  defaultSubcategoryId?: string | null;
   defaultMonth?: number | null; // 1-12
   defaultAmount?: number | null;
   // Optional description field to annotate a value
   defaultDescription?: string | null;
   onSubmit: (params: {
     categoryId: string;
+    subcategoryId: string | null;
     month: number;
     amount: number;
     description?: string | null;
@@ -49,13 +55,18 @@ export function AddValueDialog({
   kind,
   categories,
   defaultCategoryId = null,
+  defaultSubcategoryId = null,
   defaultMonth = null,
   defaultAmount = null,
   defaultDescription = null,
   onSubmit,
   onClose,
 }: Props) {
+  const NONE = "__none__"; // sentinel for "no subcategory"
   const [categoryId, setCategoryId] = useState<string>(defaultCategoryId ?? "");
+  const [subcategoryId, setSubcategoryId] = useState<string>(
+    defaultSubcategoryId ?? NONE
+  );
   const [month, setMonth] = useState<number>(
     defaultMonth ?? new Date().getMonth() + 1
   );
@@ -70,6 +81,7 @@ export function AddValueDialog({
   useEffect(() => {
     if (open) {
       setCategoryId(defaultCategoryId ?? "");
+      setSubcategoryId(defaultSubcategoryId ?? NONE);
       setMonth(defaultMonth ?? new Date().getMonth() + 1);
       setAmount(defaultAmount != null ? String(defaultAmount) : "");
       setDescription(defaultDescription ?? "");
@@ -77,6 +89,7 @@ export function AddValueDialog({
   }, [
     open,
     defaultCategoryId,
+    defaultSubcategoryId,
     defaultMonth,
     defaultAmount,
     defaultDescription,
@@ -98,7 +111,13 @@ export function AddValueDialog({
 
         <div className="space-y-2">
           <label className="text-sm">Categoría</label>
-          <Select value={categoryId} onValueChange={(v) => setCategoryId(v)}>
+          <Select
+            value={categoryId}
+            onValueChange={(v) => {
+              setCategoryId(v);
+              setSubcategoryId(NONE);
+            }}
+          >
             <SelectTrigger>
               <SelectValue placeholder="Selecciona categoría" />
             </SelectTrigger>
@@ -106,6 +125,33 @@ export function AddValueDialog({
               {categories.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm">Subcategoría</label>
+          <Select
+            value={subcategoryId}
+            onValueChange={(v) => setSubcategoryId(v)}
+            disabled={
+              !categoryId ||
+              (categories.find((c) => c.id === categoryId)?.subcategories
+                ?.length ?? 0) === 0
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Sin subcategoría" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>Sin subcategoría</SelectItem>
+              {(
+                categories.find((c) => c.id === categoryId)?.subcategories ?? []
+              ).map((sub) => (
+                <SelectItem key={sub.id} value={sub.id}>
+                  {sub.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -162,6 +208,7 @@ export function AddValueDialog({
               try {
                 await onSubmit({
                   categoryId,
+                  subcategoryId: subcategoryId === NONE ? null : subcategoryId,
                   month,
                   amount: Number(amount || 0),
                   description: description || null,

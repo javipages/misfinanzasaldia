@@ -15,95 +15,235 @@ import {
 import { ContentCardSkeleton, TableSkeleton } from "@/components/PageSkeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type EditableCategory = { id: string; name: string; display_order: number };
+type EditableSubcategory = {
+  id: string;
+  category_id: string;
+  name: string;
+  display_order: number;
+};
+
+type EditableCategory = {
+  id: string;
+  name: string;
+  display_order: number;
+  subcategories: EditableSubcategory[];
+};
+
+type AssetType =
+  | "cuenta_bancaria"
+  | "inversion"
+  | "efectivo"
+  | "cripto"
+  | "otro";
+
+type EditableAssetCategory = {
+  id: string;
+  name: string;
+  display_order: number;
+  type: AssetType;
+};
 
 function CategoryList({
   title,
   items,
-  onAdd,
-  onRename,
-  onDelete,
-  onMove,
+  onAddCategory,
+  onRenameCategory,
+  onDeleteCategory,
+  onMoveCategory,
+  onAddSubcategory,
+  onRenameSubcategory,
+  onDeleteSubcategory,
+  onMoveSubcategory,
 }: {
   title: string;
   items: EditableCategory[];
-  onAdd: (name: string) => void;
-  onRename: (id: string, name: string) => void;
-  onDelete: (id: string) => void;
-  onMove: (id: string, direction: "up" | "down") => void;
+  onAddCategory: (name: string) => void;
+  onRenameCategory: (id: string, name: string) => void;
+  onDeleteCategory: (id: string) => void;
+  onMoveCategory: (id: string, direction: "up" | "down") => void;
+  onAddSubcategory: (categoryId: string, name: string) => void;
+  onRenameSubcategory: (
+    categoryId: string,
+    subcategoryId: string,
+    name: string
+  ) => void;
+  onDeleteSubcategory: (categoryId: string, subcategoryId: string) => void;
+  onMoveSubcategory: (
+    categoryId: string,
+    subcategoryId: string,
+    direction: "up" | "down"
+  ) => void;
 }) {
   const [newName, setNewName] = useState("");
+  const [newSubNames, setNewSubNames] = useState<Record<string, string>>({});
+
+  function handleAddCategory() {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    void onAddCategory(trimmed);
+    setNewName("");
+  }
+
+  function handleAddSubcategory(categoryId: string) {
+    const nextName = (newSubNames[categoryId] ?? "").trim();
+    if (!nextName) return;
+    void onAddSubcategory(categoryId, nextName);
+    setNewSubNames((prev) => ({ ...prev, [categoryId]: "" }));
+  }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row">
+      <CardContent className="space-y-4">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Input
             placeholder="Nueva categoría"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
           />
-          <Button
-            onClick={() => {
-              const trimmed = newName.trim();
-              if (!trimmed) return;
-              onAdd(trimmed);
-              setNewName("");
-            }}
-            className="w-full sm:w-auto"
-          >
-            Añadir
+          <Button onClick={handleAddCategory} className="w-full sm:w-auto">
+            Añadir categoría
           </Button>
         </div>
 
-        <div className="w-full overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-muted-foreground">
-                <th className="py-2 pr-2">Nombre</th>
-                <th className="py-2">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {items.map((cat, idx) => (
-                <tr key={cat.id}>
-                  <td className="py-2 pr-2">
+        <div className="space-y-3">
+          {items.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Todavía no hay categorías.
+            </p>
+          ) : (
+            items
+              .slice()
+              .sort((a, b) => a.display_order - b.display_order)
+              .map((cat, idx) => (
+                <div
+                  key={cat.id}
+                  className="space-y-3 rounded-md border border-border p-3"
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                     <Input
                       value={cat.name}
-                      onChange={(e) => onRename(cat.id, e.target.value)}
+                      onChange={(e) =>
+                        void onRenameCategory(cat.id, e.target.value)
+                      }
                     />
-                  </td>
-                  <td className="py-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <Button
                         variant="secondary"
-                        onClick={() => onMove(cat.id, "up")}
+                        onClick={() => void onMoveCategory(cat.id, "up")}
                         disabled={idx === 0}
                       >
                         ↑
                       </Button>
                       <Button
                         variant="secondary"
-                        onClick={() => onMove(cat.id, "down")}
+                        onClick={() => void onMoveCategory(cat.id, "down")}
                         disabled={idx === items.length - 1}
                       >
                         ↓
                       </Button>
                       <Button
                         variant="destructive"
-                        onClick={() => onDelete(cat.id)}
+                        onClick={() => onDeleteCategory(cat.id)}
                       >
                         Eliminar
                       </Button>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+
+                  <div className="space-y-2 border-l border-border/40 pl-4">
+                    {(cat.subcategories ?? []).length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Sin subcategorías
+                      </p>
+                    ) : (
+                      (cat.subcategories ?? [])
+                        .slice()
+                        .sort((a, b) => a.display_order - b.display_order)
+                        .map((sub, subIdx) => (
+                          <div
+                            key={sub.id}
+                            className="flex flex-col gap-2 sm:flex-row sm:items-center"
+                          >
+                            <Input
+                              className="text-sm"
+                              value={sub.name}
+                              onChange={(e) =>
+                                void onRenameSubcategory(
+                                  cat.id,
+                                  sub.id,
+                                  e.target.value
+                                )
+                              }
+                            />
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                onClick={() =>
+                                  void onMoveSubcategory(
+                                    cat.id,
+                                    sub.id,
+                                    "up"
+                                  )
+                                }
+                                disabled={subIdx === 0}
+                              >
+                                ↑
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                onClick={() =>
+                                  void onMoveSubcategory(
+                                    cat.id,
+                                    sub.id,
+                                    "down"
+                                  )
+                                }
+                                disabled={
+                                  subIdx === (cat.subcategories ?? []).length - 1
+                                }
+                              >
+                                ↓
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                onClick={() =>
+                                  onDeleteSubcategory(cat.id, sub.id)
+                                }
+                              >
+                                Eliminar
+                              </Button>
+                            </div>
+                          </div>
+                        ))
+                    )}
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <Input
+                        className="text-sm"
+                        placeholder="Nueva subcategoría"
+                        value={newSubNames[cat.id] ?? ""}
+                        onChange={(e) =>
+                          setNewSubNames((prev) => ({
+                            ...prev,
+                            [cat.id]: e.target.value,
+                          }))
+                        }
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={() => handleAddSubcategory(cat.id)}
+                        className="sm:w-auto"
+                      >
+                        Añadir subcategoría
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+          )}
         </div>
       </CardContent>
     </Card>
@@ -111,12 +251,6 @@ function CategoryList({
 }
 
 export default function Settings() {
-  type AssetType =
-    | "cuenta_bancaria"
-    | "inversion"
-    | "efectivo"
-    | "cripto"
-    | "otro";
   const {
     income,
     expense,
@@ -135,22 +269,32 @@ export default function Settings() {
     deleteIncome,
     deleteExpense,
     deleteAsset,
+    addIncomeSubcategory,
+    addExpenseSubcategory,
+    renameIncomeSubcategory,
+    renameExpenseSubcategory,
+    deleteIncomeSubcategory,
+    deleteExpenseSubcategory,
+    moveIncomeSubcategory,
+    moveExpenseSubcategory,
   } = useSettings();
   const loading = isLoading;
   const saving = isFetching;
   const [confirm, setConfirm] = useState<{
     open: boolean;
-    id: string | null;
+    categoryId: string | null;
+    subcategoryId: string | null;
     scope: "income" | "expense" | "asset" | null;
   }>({
     open: false,
-    id: null,
+    categoryId: null,
+    subcategoryId: null,
     scope: null,
   });
 
   const sortedIncome = income;
   const sortedExpense = expense;
-  const sortedAssets = assets as (EditableCategory & { type: AssetType })[];
+  const sortedAssets = assets as EditableAssetCategory[];
 
   const [newAssetName, setNewAssetName] = useState("");
   const [newAssetType, setNewAssetType] =
@@ -258,18 +402,82 @@ export default function Settings() {
         <CategoryList
           title="Categorías de ingresos"
           items={sortedIncome}
-          onAdd={handleAddIncome}
-          onRename={handleRenameIncome}
-          onDelete={(id) => setConfirm({ open: true, id, scope: "income" })}
-          onMove={handleMoveIncome}
+          onAddCategory={handleAddIncome}
+          onRenameCategory={handleRenameIncome}
+          onDeleteCategory={(categoryId) =>
+            setConfirm({
+              open: true,
+              categoryId,
+              subcategoryId: null,
+              scope: "income",
+            })
+          }
+          onMoveCategory={handleMoveIncome}
+          onAddSubcategory={(categoryId, name) =>
+            void addIncomeSubcategory.mutateAsync({ categoryId, name })
+          }
+          onRenameSubcategory={(categoryId, subcategoryId, name) =>
+            void renameIncomeSubcategory.mutateAsync({
+              id: subcategoryId,
+              categoryId,
+              name,
+            })
+          }
+          onDeleteSubcategory={(categoryId, subcategoryId) =>
+            setConfirm({
+              open: true,
+              categoryId,
+              subcategoryId,
+              scope: "income",
+            })
+          }
+          onMoveSubcategory={(categoryId, subcategoryId, direction) =>
+            void moveIncomeSubcategory.mutateAsync({
+              categoryId,
+              subcategoryId,
+              direction,
+            })
+          }
         />
         <CategoryList
           title="Categorías de gastos"
           items={sortedExpense}
-          onAdd={handleAddExpense}
-          onRename={handleRenameExpense}
-          onDelete={(id) => setConfirm({ open: true, id, scope: "expense" })}
-          onMove={handleMoveExpense}
+          onAddCategory={handleAddExpense}
+          onRenameCategory={handleRenameExpense}
+          onDeleteCategory={(categoryId) =>
+            setConfirm({
+              open: true,
+              categoryId,
+              subcategoryId: null,
+              scope: "expense",
+            })
+          }
+          onMoveCategory={handleMoveExpense}
+          onAddSubcategory={(categoryId, name) =>
+            void addExpenseSubcategory.mutateAsync({ categoryId, name })
+          }
+          onRenameSubcategory={(categoryId, subcategoryId, name) =>
+            void renameExpenseSubcategory.mutateAsync({
+              id: subcategoryId,
+              categoryId,
+              name,
+            })
+          }
+          onDeleteSubcategory={(categoryId, subcategoryId) =>
+            setConfirm({
+              open: true,
+              categoryId,
+              subcategoryId,
+              scope: "expense",
+            })
+          }
+          onMoveSubcategory={(categoryId, subcategoryId, direction) =>
+            void moveExpenseSubcategory.mutateAsync({
+              categoryId,
+              subcategoryId,
+              direction,
+            })
+          }
         />
       </div>
 
@@ -372,7 +580,8 @@ export default function Settings() {
                           onClick={() =>
                             setConfirm({
                               open: true,
-                              id: cat.id,
+                              categoryId: cat.id,
+                              subcategoryId: null,
                               scope: "asset",
                             })
                           }
@@ -392,26 +601,61 @@ export default function Settings() {
       <ConfirmDialog
         open={confirm.open}
         title={
-          confirm.scope === "asset" ? "Eliminar activo" : "Eliminar categoría"
+          confirm.scope === "asset"
+            ? "Eliminar activo"
+            : confirm.subcategoryId
+            ? "Eliminar subcategoría"
+            : "Eliminar categoría"
         }
         description={
           confirm.scope === "asset"
             ? "Esta acción no se puede deshacer. ¿Seguro que quieres eliminar el activo?"
+            : confirm.subcategoryId
+            ? "Esta acción no se puede deshacer. ¿Seguro que quieres eliminar la subcategoría?"
             : "Esta acción no se puede deshacer. ¿Seguro que quieres eliminar la categoría?"
         }
         confirmText="Eliminar"
         cancelText="Cancelar"
         onConfirm={() => {
-          if (!confirm.id || !confirm.scope) return;
+          if (!confirm.scope) return;
           if (confirm.scope === "income") {
-            void handleDeleteIncome(confirm.id);
+            if (confirm.subcategoryId && confirm.categoryId) {
+              void deleteIncomeSubcategory.mutateAsync({
+                id: confirm.subcategoryId,
+                categoryId: confirm.categoryId,
+              });
+            } else if (confirm.categoryId) {
+              void handleDeleteIncome(confirm.categoryId);
+            }
           } else if (confirm.scope === "expense") {
-            void handleDeleteExpense(confirm.id);
+            if (confirm.subcategoryId && confirm.categoryId) {
+              void deleteExpenseSubcategory.mutateAsync({
+                id: confirm.subcategoryId,
+                categoryId: confirm.categoryId,
+              });
+            } else if (confirm.categoryId) {
+              void handleDeleteExpense(confirm.categoryId);
+            }
           } else if (confirm.scope === "asset") {
-            void deleteAsset.mutateAsync(confirm.id);
+            if (confirm.categoryId) {
+              void deleteAsset.mutateAsync(confirm.categoryId);
+            }
           }
+          setConfirm({
+            open: false,
+            categoryId: null,
+            subcategoryId: null,
+            scope: null,
+          });
         }}
-        onClose={() => setConfirm({ open: false, id: null, scope: null })}
+        onClose={() =>
+          setConfirm({
+            open: false,
+            categoryId: null,
+            subcategoryId: null,
+            scope: null,
+          })
+        }
       />
     </div>
   );

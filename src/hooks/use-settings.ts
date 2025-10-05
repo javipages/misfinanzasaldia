@@ -13,14 +13,29 @@ import {
   deleteIncomeCategory,
   deleteExpenseCategory,
   deleteAssetCategory,
+  createIncomeSubcategory,
+  createExpenseSubcategory,
+  updateIncomeSubcategory,
+  updateExpenseSubcategory,
+  deleteIncomeSubcategory,
+  deleteExpenseSubcategory,
   type CategoryRow,
   type CategoryInput,
   type AssetCategoryRow,
   type AssetCategoryInput,
+  type SubcategoryRow,
+  type SubcategoryInput,
 } from "@/integrations/supabase/categories";
 import { useUserStore } from "@/store/user";
 
-type EditableCategory = Pick<CategoryRow, "id" | "name" | "display_order">;
+type BaseCategory = Pick<CategoryRow, "id" | "name" | "display_order">;
+type EditableSubcategory = Pick<
+  SubcategoryRow,
+  "id" | "category_id" | "name" | "display_order"
+>;
+type EditableCategoryTree = BaseCategory & {
+  subcategories: EditableSubcategory[];
+};
 
 const QK = {
   income: (year: number) => ["categories", "income", year] as const,
@@ -35,24 +50,36 @@ export function useSettings() {
 
   const incomeQuery = useQuery({
     queryKey: QK.income(year),
-    queryFn: async (): Promise<EditableCategory[]> => {
+    queryFn: async (): Promise<EditableCategoryTree[]> => {
       const data = await listIncomeCategories(year);
       return data.map((c) => ({
         id: c.id,
         name: c.name,
         display_order: c.display_order,
+        subcategories: (c.subcategories ?? []).map((s) => ({
+          id: s.id,
+          category_id: s.category_id,
+          name: s.name,
+          display_order: s.display_order,
+        })),
       }));
     },
   });
 
   const expenseQuery = useQuery({
     queryKey: QK.expense(year),
-    queryFn: async (): Promise<EditableCategory[]> => {
+    queryFn: async (): Promise<EditableCategoryTree[]> => {
       const data = await listExpenseCategories(year);
       return data.map((c) => ({
         id: c.id,
         name: c.name,
         display_order: c.display_order,
+        subcategories: (c.subcategories ?? []).map((s) => ({
+          id: s.id,
+          category_id: s.category_id,
+          name: s.name,
+          display_order: s.display_order,
+        })),
       }));
     },
   });
@@ -60,7 +87,7 @@ export function useSettings() {
   const assetsQuery = useQuery({
     queryKey: QK.assets(year),
     queryFn: async (): Promise<
-      (EditableCategory & { type: AssetCategoryRow["type"] })[]
+      (BaseCategory & { type: AssetCategoryRow["type"] })[]
     > => {
       const data = await listAssetCategories(year);
       return data.map((c) => ({
@@ -72,20 +99,27 @@ export function useSettings() {
     },
   });
 
-  const sortedIncome = useMemo(
-    () =>
-      (incomeQuery.data ?? [])
-        .slice()
-        .sort((a, b) => a.display_order - b.display_order),
-    [incomeQuery.data]
-  );
-  const sortedExpense = useMemo(
-    () =>
-      (expenseQuery.data ?? [])
-        .slice()
-        .sort((a, b) => a.display_order - b.display_order),
-    [expenseQuery.data]
-  );
+  const sortedIncome = useMemo(() => {
+    return (incomeQuery.data ?? [])
+      .map((category) => ({
+        ...category,
+        subcategories: (category.subcategories ?? [])
+          .slice()
+          .sort((a, b) => a.display_order - b.display_order),
+      }))
+      .sort((a, b) => a.display_order - b.display_order);
+  }, [incomeQuery.data]);
+
+  const sortedExpense = useMemo(() => {
+    return (expenseQuery.data ?? [])
+      .map((category) => ({
+        ...category,
+        subcategories: (category.subcategories ?? [])
+          .slice()
+          .sort((a, b) => a.display_order - b.display_order),
+      }))
+      .sort((a, b) => a.display_order - b.display_order);
+  }, [expenseQuery.data]);
 
   const sortedAssets = useMemo(
     () =>
@@ -95,7 +129,7 @@ export function useSettings() {
     [assetsQuery.data]
   );
 
-  function nextOrder(arr: EditableCategory[]) {
+  function nextOrder<T extends { display_order: number }>(arr: T[]) {
     return arr.length ? Math.max(...arr.map((c) => c.display_order)) + 1 : 0;
   }
 
@@ -109,14 +143,15 @@ export function useSettings() {
     },
     onMutate: async (name: string) => {
       await qc.cancelQueries({ queryKey: QK.income(year) });
-      const prev = qc.getQueryData<EditableCategory[]>(QK.income(year));
-      const newCategory: EditableCategory = {
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.income(year));
+      const newCategory: EditableCategoryTree = {
         id: `temp-${Date.now()}`, // Temporary ID for optimistic update
         name,
         display_order: nextOrder(prev ?? []),
+        subcategories: [],
       };
       if (prev) {
-        qc.setQueryData<EditableCategory[]>(QK.income(year), [
+        qc.setQueryData<EditableCategoryTree[]>(QK.income(year), [
           ...prev,
           newCategory,
         ]);
@@ -142,17 +177,124 @@ export function useSettings() {
     },
     onMutate: async (name: string) => {
       await qc.cancelQueries({ queryKey: QK.expense(year) });
-      const prev = qc.getQueryData<EditableCategory[]>(QK.expense(year));
-      const newCategory: EditableCategory = {
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.expense(year));
+      const newCategory: EditableCategoryTree = {
         id: `temp-${Date.now()}`, // Temporary ID for optimistic update
         name,
         display_order: nextOrder(prev ?? []),
+        subcategories: [],
       };
       if (prev) {
-        qc.setQueryData<EditableCategory[]>(QK.expense(year), [
+        qc.setQueryData<EditableCategoryTree[]>(QK.expense(year), [
           ...prev,
           newCategory,
         ]);
+      }
+      return { prev } as const;
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(QK.expense(year), ctx.prev);
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: QK.expense(year) });
+      void refreshAvailableYears();
+    },
+  });
+
+  const addIncomeSubcategory = useMutation({
+    mutationFn: async ({
+      categoryId,
+      name,
+    }: {
+      categoryId: string;
+      name: string;
+    }) => {
+      const parent = incomeQuery.data?.find((c) => c.id === categoryId);
+      const display_order = nextOrder(parent?.subcategories ?? []);
+      const input: SubcategoryInput = {
+        category_id: categoryId,
+        name,
+        display_order,
+      };
+      return createIncomeSubcategory(input, year);
+    },
+    onMutate: async ({ categoryId, name }) => {
+      await qc.cancelQueries({ queryKey: QK.income(year) });
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.income(year));
+      const display_order = nextOrder(
+        prev?.find((c) => c.id === categoryId)?.subcategories ?? []
+      );
+      if (prev) {
+        const optimistic = prev.map((category) =>
+          category.id === categoryId
+            ? {
+                ...category,
+                subcategories: [
+                  ...(category.subcategories ?? []),
+                  {
+                    id: `temp-sub-${Date.now()}`,
+                    category_id: categoryId,
+                    name,
+                    display_order,
+                  },
+                ],
+              }
+            : category
+        );
+        qc.setQueryData(QK.income(year), optimistic);
+      }
+      return { prev } as const;
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(QK.income(year), ctx.prev);
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: QK.income(year) });
+      void refreshAvailableYears();
+    },
+  });
+
+  const addExpenseSubcategory = useMutation({
+    mutationFn: async ({
+      categoryId,
+      name,
+    }: {
+      categoryId: string;
+      name: string;
+    }) => {
+      const parent = expenseQuery.data?.find((c) => c.id === categoryId);
+      const display_order = nextOrder(parent?.subcategories ?? []);
+      const input: SubcategoryInput = {
+        category_id: categoryId,
+        name,
+        display_order,
+      };
+      return createExpenseSubcategory(input, year);
+    },
+    onMutate: async ({ categoryId, name }) => {
+      await qc.cancelQueries({ queryKey: QK.expense(year) });
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.expense(year));
+      const display_order = nextOrder(
+        prev?.find((c) => c.id === categoryId)?.subcategories ?? []
+      );
+      if (prev) {
+        const optimistic = prev.map((category) =>
+          category.id === categoryId
+            ? {
+                ...category,
+                subcategories: [
+                  ...(category.subcategories ?? []),
+                  {
+                    id: `temp-sub-${Date.now()}`,
+                    category_id: categoryId,
+                    name,
+                    display_order,
+                  },
+                ],
+              }
+            : category
+        );
+        qc.setQueryData(QK.expense(year), optimistic);
       }
       return { prev } as const;
     },
@@ -183,9 +325,9 @@ export function useSettings() {
     onMutate: async ({ name, type }) => {
       await qc.cancelQueries({ queryKey: QK.assets(year) });
       const prev = qc.getQueryData<
-        (EditableCategory & { type: AssetCategoryRow["type"] })[]
+        (BaseCategory & { type: AssetCategoryRow["type"] })[]
       >(QK.assets(year));
-      const newAsset: EditableCategory & { type: AssetCategoryRow["type"] } = {
+      const newAsset: BaseCategory & { type: AssetCategoryRow["type"] } = {
         id: `temp-${Date.now()}`, // Temporary ID for optimistic update
         name,
         display_order: nextOrder(prev ?? []),
@@ -193,7 +335,7 @@ export function useSettings() {
       };
       if (prev) {
         qc.setQueryData<
-          (EditableCategory & { type: AssetCategoryRow["type"] })[]
+          (BaseCategory & { type: AssetCategoryRow["type"] })[]
         >(QK.assets(year), [...prev, newAsset]);
       }
       return { prev } as const;
@@ -213,9 +355,9 @@ export function useSettings() {
     },
     onMutate: async ({ id, name }) => {
       await qc.cancelQueries({ queryKey: QK.income(year) });
-      const prev = qc.getQueryData<EditableCategory[]>(QK.income(year));
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.income(year));
       if (prev) {
-        qc.setQueryData<EditableCategory[]>(
+        qc.setQueryData<EditableCategoryTree[]>(
           QK.income(year),
           prev.map((c) => (c.id === id ? { ...c, name } : c))
         );
@@ -237,9 +379,9 @@ export function useSettings() {
     },
     onMutate: async ({ id, name }) => {
       await qc.cancelQueries({ queryKey: QK.expense(year) });
-      const prev = qc.getQueryData<EditableCategory[]>(QK.expense(year));
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.expense(year));
       if (prev) {
-        qc.setQueryData<EditableCategory[]>(
+        qc.setQueryData<EditableCategoryTree[]>(
           QK.expense(year),
           prev.map((c) => (c.id === id ? { ...c, name } : c))
         );
@@ -255,13 +397,87 @@ export function useSettings() {
     },
   });
 
+  const renameIncomeSubcategory = useMutation({
+    mutationFn: async ({
+      id,
+      name,
+    }: {
+      id: string;
+      name: string;
+      categoryId: string;
+    }) => {
+      return updateIncomeSubcategory(id, { name }, year);
+    },
+    onMutate: async ({ id, name, categoryId }) => {
+      await qc.cancelQueries({ queryKey: QK.income(year) });
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.income(year));
+      if (prev) {
+        const optimistic = prev.map((category) =>
+          category.id === categoryId
+            ? {
+                ...category,
+                subcategories: (category.subcategories ?? []).map((sub) =>
+                  sub.id === id ? { ...sub, name } : sub
+                ),
+              }
+            : category
+        );
+        qc.setQueryData(QK.income(year), optimistic);
+      }
+      return { prev } as const;
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(QK.income(year), ctx.prev);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: QK.income(year) });
+    },
+  });
+
+  const renameExpenseSubcategory = useMutation({
+    mutationFn: async ({
+      id,
+      name,
+    }: {
+      id: string;
+      name: string;
+      categoryId: string;
+    }) => {
+      return updateExpenseSubcategory(id, { name }, year);
+    },
+    onMutate: async ({ id, name, categoryId }) => {
+      await qc.cancelQueries({ queryKey: QK.expense(year) });
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.expense(year));
+      if (prev) {
+        const optimistic = prev.map((category) =>
+          category.id === categoryId
+            ? {
+                ...category,
+                subcategories: (category.subcategories ?? []).map((sub) =>
+                  sub.id === id ? { ...sub, name } : sub
+                ),
+              }
+            : category
+        );
+        qc.setQueryData(QK.expense(year), optimistic);
+      }
+      return { prev } as const;
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(QK.expense(year), ctx.prev);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: QK.expense(year) });
+    },
+  });
+
   const deleteIncome = useMutation({
     mutationFn: async (id: string) => deleteIncomeCategory(id, year),
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: QK.income(year) });
-      const prev = qc.getQueryData<EditableCategory[]>(QK.income(year));
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.income(year));
       if (prev) {
-        qc.setQueryData<EditableCategory[]>(
+        qc.setQueryData<EditableCategoryTree[]>(
           QK.income(year),
           prev.filter((c) => c.id !== id)
         );
@@ -281,9 +497,9 @@ export function useSettings() {
     mutationFn: async (id: string) => deleteExpenseCategory(id, year),
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: QK.expense(year) });
-      const prev = qc.getQueryData<EditableCategory[]>(QK.expense(year));
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.expense(year));
       if (prev) {
-        qc.setQueryData<EditableCategory[]>(
+        qc.setQueryData<EditableCategoryTree[]>(
           QK.expense(year),
           prev.filter((c) => c.id !== id)
         );
@@ -299,6 +515,68 @@ export function useSettings() {
     },
   });
 
+  const removeIncomeSubcategory = useMutation({
+    mutationFn: async ({ id }: { id: string; categoryId: string }) => {
+      return deleteIncomeSubcategory(id, year);
+    },
+    onMutate: async ({ id, categoryId }) => {
+      await qc.cancelQueries({ queryKey: QK.income(year) });
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.income(year));
+      if (prev) {
+        const optimistic = prev.map((category) =>
+          category.id === categoryId
+            ? {
+                ...category,
+                subcategories: (category.subcategories ?? []).filter(
+                  (sub) => sub.id !== id
+                ),
+              }
+            : category
+        );
+        qc.setQueryData(QK.income(year), optimistic);
+      }
+      return { prev } as const;
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(QK.income(year), ctx.prev);
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: QK.income(year) });
+      void refreshAvailableYears();
+    },
+  });
+
+  const removeExpenseSubcategory = useMutation({
+    mutationFn: async ({ id }: { id: string; categoryId: string }) => {
+      return deleteExpenseSubcategory(id, year);
+    },
+    onMutate: async ({ id, categoryId }) => {
+      await qc.cancelQueries({ queryKey: QK.expense(year) });
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.expense(year));
+      if (prev) {
+        const optimistic = prev.map((category) =>
+          category.id === categoryId
+            ? {
+                ...category,
+                subcategories: (category.subcategories ?? []).filter(
+                  (sub) => sub.id !== id
+                ),
+              }
+            : category
+        );
+        qc.setQueryData(QK.expense(year), optimistic);
+      }
+      return { prev } as const;
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(QK.expense(year), ctx.prev);
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: QK.expense(year) });
+      void refreshAvailableYears();
+    },
+  });
+
   const renameAsset = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
       return updateAssetCategory(id, { name }, year);
@@ -306,11 +584,11 @@ export function useSettings() {
     onMutate: async ({ id, name }) => {
       await qc.cancelQueries({ queryKey: QK.assets(year) });
       const prev = qc.getQueryData<
-        (EditableCategory & { type: AssetCategoryRow["type"] })[]
+        (BaseCategory & { type: AssetCategoryRow["type"] })[]
       >(QK.assets(year));
       if (prev) {
         qc.setQueryData<
-          (EditableCategory & { type: AssetCategoryRow["type"] })[]
+          (BaseCategory & { type: AssetCategoryRow["type"] })[]
         >(
           QK.assets(year),
           prev.map((c) => (c.id === id ? { ...c, name } : c))
@@ -340,11 +618,11 @@ export function useSettings() {
     onMutate: async ({ id, type }) => {
       await qc.cancelQueries({ queryKey: QK.assets(year) });
       const prev = qc.getQueryData<
-        (EditableCategory & { type: AssetCategoryRow["type"] })[]
+        (BaseCategory & { type: AssetCategoryRow["type"] })[]
       >(QK.assets(year));
       if (prev) {
         qc.setQueryData<
-          (EditableCategory & { type: AssetCategoryRow["type"] })[]
+          (BaseCategory & { type: AssetCategoryRow["type"] })[]
         >(
           QK.assets(year),
           prev.map((c) => (c.id === id ? { ...c, type } : c))
@@ -366,11 +644,11 @@ export function useSettings() {
     onMutate: async (id) => {
       await qc.cancelQueries({ queryKey: QK.assets(year) });
       const prev = qc.getQueryData<
-        (EditableCategory & { type: AssetCategoryRow["type"] })[]
+        (BaseCategory & { type: AssetCategoryRow["type"] })[]
       >(QK.assets(year));
       if (prev) {
         qc.setQueryData<
-          (EditableCategory & { type: AssetCategoryRow["type"] })[]
+          (BaseCategory & { type: AssetCategoryRow["type"] })[]
         >(
           QK.assets(year),
           prev.filter((c) => c.id !== id)
@@ -423,7 +701,7 @@ export function useSettings() {
     },
     onMutate: async ({ id, direction }) => {
       await qc.cancelQueries({ queryKey: QK.income(year) });
-      const prev = qc.getQueryData<EditableCategory[]>(QK.income(year));
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.income(year));
       if (prev) {
         const ordered = prev
           .slice()
@@ -436,7 +714,7 @@ export function useSettings() {
           const tmp = a.display_order;
           a.display_order = b.display_order;
           b.display_order = tmp;
-          qc.setQueryData<EditableCategory[]>(QK.income(year), ordered);
+          qc.setQueryData<EditableCategoryTree[]>(QK.income(year), ordered);
         }
       }
       return { prev } as const;
@@ -493,7 +771,7 @@ export function useSettings() {
     },
     onMutate: async ({ id, direction }) => {
       await qc.cancelQueries({ queryKey: QK.expense(year) });
-      const prev = qc.getQueryData<EditableCategory[]>(QK.expense(year));
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.expense(year));
       if (prev) {
         const ordered = prev
           .slice()
@@ -506,8 +784,144 @@ export function useSettings() {
           const tmp = a.display_order;
           a.display_order = b.display_order;
           b.display_order = tmp;
-          qc.setQueryData<EditableCategory[]>(QK.expense(year), ordered);
+          qc.setQueryData<EditableCategoryTree[]>(QK.expense(year), ordered);
         }
+      }
+      return { prev } as const;
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(QK.expense(year), ctx.prev);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: QK.expense(year) });
+    },
+  });
+
+  const moveIncomeSubcategory = useMutation({
+    mutationFn: async ({
+      categoryId,
+      subcategoryId,
+      direction,
+    }: {
+      categoryId: string;
+      subcategoryId: string;
+      direction: "up" | "down";
+    }) => {
+      const currentData = await listIncomeCategories(year);
+      const category = currentData.find((c) => c.id === categoryId);
+      if (!category) return;
+
+      const ordered = (category.subcategories ?? [])
+        .slice()
+        .sort((a, b) => a.display_order - b.display_order);
+      const index = ordered.findIndex((sub) => sub.id === subcategoryId);
+      const swapWith = direction === "up" ? index - 1 : index + 1;
+      if (index < 0 || swapWith < 0 || swapWith >= ordered.length) return;
+
+      const moving = ordered[index];
+      ordered.splice(index, 1);
+      ordered.splice(swapWith, 0, moving);
+
+      await Promise.all(
+        ordered.map((sub, idx) =>
+          updateIncomeSubcategory(sub.id, { display_order: idx + 1 }, year)
+        )
+      );
+    },
+    onMutate: async ({ categoryId, subcategoryId, direction }) => {
+      await qc.cancelQueries({ queryKey: QK.income(year) });
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.income(year));
+      if (prev) {
+        const optimistic = prev.map((category) => {
+          if (category.id !== categoryId) return category;
+          const ordered = category.subcategories
+            .slice()
+            .sort((a, b) => a.display_order - b.display_order);
+          const index = ordered.findIndex((sub) => sub.id === subcategoryId);
+          const swapWith = direction === "up" ? index - 1 : index + 1;
+          if (index < 0 || swapWith < 0 || swapWith >= ordered.length) {
+            return category;
+          }
+          const moving = ordered[index];
+          ordered.splice(index, 1);
+          ordered.splice(swapWith, 0, moving);
+          return {
+            ...category,
+            subcategories: ordered.map((sub, idx) => ({
+              ...sub,
+              display_order: idx + 1,
+            })),
+          };
+        });
+        qc.setQueryData(QK.income(year), optimistic);
+      }
+      return { prev } as const;
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(QK.income(year), ctx.prev);
+    },
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: QK.income(year) });
+    },
+  });
+
+  const moveExpenseSubcategory = useMutation({
+    mutationFn: async ({
+      categoryId,
+      subcategoryId,
+      direction,
+    }: {
+      categoryId: string;
+      subcategoryId: string;
+      direction: "up" | "down";
+    }) => {
+      const currentData = await listExpenseCategories(year);
+      const category = currentData.find((c) => c.id === categoryId);
+      if (!category) return;
+
+      const ordered = (category.subcategories ?? [])
+        .slice()
+        .sort((a, b) => a.display_order - b.display_order);
+      const index = ordered.findIndex((sub) => sub.id === subcategoryId);
+      const swapWith = direction === "up" ? index - 1 : index + 1;
+      if (index < 0 || swapWith < 0 || swapWith >= ordered.length) return;
+
+      const moving = ordered[index];
+      ordered.splice(index, 1);
+      ordered.splice(swapWith, 0, moving);
+
+      await Promise.all(
+        ordered.map((sub, idx) =>
+          updateExpenseSubcategory(sub.id, { display_order: idx + 1 }, year)
+        )
+      );
+    },
+    onMutate: async ({ categoryId, subcategoryId, direction }) => {
+      await qc.cancelQueries({ queryKey: QK.expense(year) });
+      const prev = qc.getQueryData<EditableCategoryTree[]>(QK.expense(year));
+      if (prev) {
+        const optimistic = prev.map((category) => {
+          if (category.id !== categoryId) return category;
+          const ordered = category.subcategories
+            .slice()
+            .sort((a, b) => a.display_order - b.display_order);
+          const index = ordered.findIndex((sub) => sub.id === subcategoryId);
+          const swapWith = direction === "up" ? index - 1 : index + 1;
+          if (index < 0 || swapWith < 0 || swapWith >= ordered.length) {
+            return category;
+          }
+          const moving = ordered[index];
+          ordered.splice(index, 1);
+          ordered.splice(swapWith, 0, moving);
+          return {
+            ...category,
+            subcategories: ordered.map((sub, idx) => ({
+              ...sub,
+              display_order: idx + 1,
+            })),
+          };
+        });
+        qc.setQueryData(QK.expense(year), optimistic);
       }
       return { prev } as const;
     },
@@ -523,12 +937,13 @@ export function useSettings() {
     income: sortedIncome,
     expense: sortedExpense,
     assets: sortedAssets,
-    isLoading: incomeQuery.isLoading || expenseQuery.isLoading,
+    isLoading:
+      incomeQuery.isLoading || expenseQuery.isLoading || assetsQuery.isLoading,
     isFetching:
       incomeQuery.isFetching ||
       expenseQuery.isFetching ||
       assetsQuery.isFetching,
-    // mutations
+    // category mutations
     addIncome,
     addExpense,
     addAsset,
@@ -541,5 +956,14 @@ export function useSettings() {
     deleteIncome,
     deleteExpense,
     deleteAsset,
+    // subcategory mutations
+    addIncomeSubcategory,
+    addExpenseSubcategory,
+    renameIncomeSubcategory,
+    renameExpenseSubcategory,
+    deleteIncomeSubcategory: removeIncomeSubcategory,
+    deleteExpenseSubcategory: removeExpenseSubcategory,
+    moveIncomeSubcategory,
+    moveExpenseSubcategory,
   };
 }

@@ -13,6 +13,7 @@ type Props = {
   kind: "income" | "expense";
   month: number; // 1-12
   categoryName: string;
+  subcategoryName?: string | null;
   entries: EditableEntry[];
   onCreate: (data: {
     amount: number;
@@ -46,6 +47,7 @@ export function ManageEntriesDialog({
   kind,
   month,
   categoryName,
+  subcategoryName = null,
   entries,
   onCreate,
   onUpdate,
@@ -67,6 +69,9 @@ export function ManageEntriesDialog({
   if (!open) return null;
 
   const title = kind === "income" ? "Ingresos" : "Gastos";
+  const context = subcategoryName
+    ? `${categoryName} · ${subcategoryName}`
+    : categoryName;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -78,7 +83,7 @@ export function ManageEntriesDialog({
       <div className="relative bg-background rounded-md shadow-lg w-full max-w-lg mx-4 p-4 space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold">
-            {title} · {categoryName} · {MONTHS[month - 1]}
+            {title} · {context} · {MONTHS[month - 1]}
           </h2>
           <Button variant="outline" onClick={onClose} className="self-end sm:self-auto">
             Cerrar

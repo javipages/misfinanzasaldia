@@ -41,7 +41,7 @@ const Income = () => {
             </Button>
           </ImportBudgetDialog>
           <Button
-            onClick={() => matrixRef.current?.openAddDialog(null, null)}
+            onClick={() => matrixRef.current?.openAddDialog()}
             className="w-full sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />

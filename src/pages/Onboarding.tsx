@@ -26,6 +26,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { useUserStore } from "@/store/user";
+import type { CategorySeed } from "@/integrations/supabase/categories";
 interface OnboardingStep {
   id: number;
   title: string;
@@ -40,8 +41,8 @@ const Onboarding = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [userProfile, setUserProfile] = useState({
     emailNotifications: true,
-    incomeCategories: [] as string[],
-    expenseCategories: [] as string[],
+    incomeCategories: [] as CategorySeed[],
+    expenseCategories: [] as CategorySeed[],
     assetCategories: [] as string[],
   });
   const [loading, setLoading] = useState(false);
@@ -77,8 +78,14 @@ const Onboarding = () => {
     try {
       const skipProfile = {
         emailNotifications: true,
-        incomeCategories: defaultIncomeCategories,
-        expenseCategories: defaultExpenseCategories,
+        incomeCategories: defaultIncomeCategories.map((name) => ({
+          name,
+          subcategories: [],
+        })),
+        expenseCategories: defaultExpenseCategories.map((name) => ({
+          name,
+          subcategories: [],
+        })),
         assetCategories: defaultAssetCategories,
       };
       console.log("Skipping onboarding with:", skipProfile);
@@ -95,21 +102,27 @@ const Onboarding = () => {
   };
 
   const toggleIncomeCategory = (category: string) => {
-    setUserProfile((prev) => ({
-      ...prev,
-      incomeCategories: prev.incomeCategories.includes(category)
-        ? prev.incomeCategories.filter((c) => c !== category)
-        : [...prev.incomeCategories, category],
-    }));
+    setUserProfile((prev) => {
+      const exists = prev.incomeCategories.some((c) => c.name === category);
+      return {
+        ...prev,
+        incomeCategories: exists
+          ? prev.incomeCategories.filter((c) => c.name !== category)
+          : [...prev.incomeCategories, { name: category, subcategories: [] }],
+      };
+    });
   };
 
   const toggleExpenseCategory = (category: string) => {
-    setUserProfile((prev) => ({
-      ...prev,
-      expenseCategories: prev.expenseCategories.includes(category)
-        ? prev.expenseCategories.filter((c) => c !== category)
-        : [...prev.expenseCategories, category],
-    }));
+    setUserProfile((prev) => {
+      const exists = prev.expenseCategories.some((c) => c.name === category);
+      return {
+        ...prev,
+        expenseCategories: exists
+          ? prev.expenseCategories.filter((c) => c.name !== category)
+          : [...prev.expenseCategories, { name: category, subcategories: [] }],
+      };
+    });
   };
 
   const toggleAssetCategory = (category: string) => {
@@ -122,16 +135,94 @@ const Onboarding = () => {
   };
 
   const addCustomIncomeCategory = (category: string) => {
+    const trimmed = category.trim();
+    if (!trimmed) return;
     setUserProfile((prev) => ({
       ...prev,
-      incomeCategories: [...prev.incomeCategories, category],
+      incomeCategories: [
+        ...prev.incomeCategories,
+        { name: trimmed, subcategories: [] },
+      ],
     }));
   };
 
   const addCustomExpenseCategory = (category: string) => {
+    const trimmed = category.trim();
+    if (!trimmed) return;
     setUserProfile((prev) => ({
       ...prev,
-      expenseCategories: [...prev.expenseCategories, category],
+      expenseCategories: [
+        ...prev.expenseCategories,
+        { name: trimmed, subcategories: [] },
+      ],
+    }));
+  };
+
+  const addIncomeSubcategory = (category: string, subcategory: string) => {
+    const trimmed = subcategory.trim();
+    if (!trimmed) return;
+    setUserProfile((prev) => ({
+      ...prev,
+      incomeCategories: prev.incomeCategories.map((cat) =>
+        cat.name === category
+          ? {
+              ...cat,
+              subcategories: Array.from(
+                new Set([...(cat.subcategories ?? []), trimmed])
+              ),
+            }
+          : cat
+      ),
+    }));
+  };
+
+  const addExpenseSubcategory = (category: string, subcategory: string) => {
+    const trimmed = subcategory.trim();
+    if (!trimmed) return;
+    setUserProfile((prev) => ({
+      ...prev,
+      expenseCategories: prev.expenseCategories.map((cat) =>
+        cat.name === category
+          ? {
+              ...cat,
+              subcategories: Array.from(
+                new Set([...cat.subcategories, trimmed])
+              ),
+            }
+          : cat
+      ),
+    }));
+  };
+
+  const removeIncomeSubcategory = (category: string, subcategory: string) => {
+    setUserProfile((prev) => ({
+      ...prev,
+      incomeCategories: prev.incomeCategories.map((cat) =>
+        cat.name === category
+          ? {
+              ...cat,
+              subcategories: (cat.subcategories ?? []).filter(
+                (s) => s !== subcategory
+              ),
+            }
+          : cat
+      ),
+    }));
+  };
+
+  const removeExpenseSubcategory = (category: string, subcategory: string) => {
+    setUserProfile((prev) => ({
+      ...prev,
+      expenseCategories: prev.expenseCategories.map((cat) =>
+        cat.name === category
+          ? {
+              ...cat,
+              subcategories: (cat.subcategories ?? []).filter(
+                (s) => s !== subcategory
+              ),
+            }
+          : cat
+      ),
     }));
   };
 
@@ -179,65 +270,123 @@ const Onboarding = () => {
   const CategorySelector = ({
     availableCategories,
     selectedCategories,
-    onToggle,
-    onAddCustom,
+    onToggleCategory,
+    onAddCategory,
+    onAddSubcategory,
+    onRemoveSubcategory,
   }: {
     availableCategories: string[];
-    selectedCategories: string[];
-    onToggle: (category: string) => void;
-    onAddCustom: (category: string) => void;
+    selectedCategories: CategorySeed[];
+    onToggleCategory: (category: string) => void;
+    onAddCategory: (category: string) => void;
+    onAddSubcategory: (category: string, subcategory: string) => void;
+    onRemoveSubcategory: (category: string, subcategory: string) => void;
   }) => {
     const [newCategory, setNewCategory] = useState("");
+    const [newSubNames, setNewSubNames] = useState<Record<string, string>>({});
+
+    const selectedNames = selectedCategories.map((cat) => cat.name);
 
     const handleAddCategory = () => {
-      if (
-        newCategory.trim() &&
-        !selectedCategories.includes(newCategory.trim())
-      ) {
-        onAddCustom(newCategory.trim());
-        setNewCategory("");
-      }
-    };
-
-    const handleKeyPress = (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") {
-        handleAddCategory();
-      }
+      const trimmed = newCategory.trim();
+      if (!trimmed || selectedNames.includes(trimmed)) return;
+      onAddCategory(trimmed);
+      setNewCategory("");
     };
 
     const unselectedCategories = availableCategories.filter(
-      (cat) => !selectedCategories.includes(cat)
+      (cat) => !selectedNames.includes(cat)
     );
+
+    const handleAddSubcategory = (category: string) => {
+      const value = (newSubNames[category] ?? "").trim();
+      if (!value) return;
+      onAddSubcategory(category, value);
+      setNewSubNames((prev) => ({ ...prev, [category]: "" }));
+    };
 
     return (
       <div className="space-y-6">
-        {/* Categorías seleccionadas */}
         {selectedCategories.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-muted-foreground">
               Categorías seleccionadas:
             </h4>
-            <div className="flex flex-wrap gap-2">
+            <div className="space-y-3">
               {selectedCategories.map((category) => (
-                <Badge
-                  key={category}
-                  variant="secondary"
-                  className="flex items-center gap-1 px-3 py-1 text-sm"
+                <div
+                  key={category.name}
+                  className="space-y-2 rounded-md border border-border p-3"
                 >
-                  {category}
-                  <button
-                    onClick={() => onToggle(category)}
-                    className="ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </Badge>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <span className="font-medium">{category.name}</span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="secondary" className="px-2 py-1 text-xs">
+                        {(category.subcategories ?? []).length} subcategorías
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onToggleCategory(category.name)}
+                      >
+                        Eliminar
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2 border-l border-border/40 pl-4">
+                    {(category.subcategories ?? []).length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {(category.subcategories ?? []).map((subcategory) => (
+                          <Badge
+                            key={`${category.name}-${subcategory}`}
+                            variant="outline"
+                            className="flex items-center gap-1 px-3 py-1 text-xs"
+                          >
+                            {subcategory}
+                            <button
+                              onClick={() =>
+                                onRemoveSubcategory(category.name, subcategory)
+                              }
+                              className="ml-1 text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Aún no has añadido subcategorías
+                      </p>
+                    )}
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <Input
+                        placeholder="Nueva subcategoría"
+                        value={newSubNames[category.name] ?? ""}
+                        onChange={(e) =>
+                          setNewSubNames((prev) => ({
+                            ...prev,
+                            [category.name]: e.target.value,
+                          }))
+                        }
+                        className="text-sm"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleAddSubcategory(category.name)}
+                        disabled={!(newSubNames[category.name] ?? "").trim()}
+                      >
+                        Añadir subcategoría
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Input para añadir categorías personalizadas */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-muted-foreground">
             Añadir categoría personalizada:
@@ -247,12 +396,20 @@ const Onboarding = () => {
               placeholder="Escribe una categoría..."
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
-              onKeyPress={handleKeyPress}
               className="flex-1"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddCategory();
+                }
+              }}
             />
             <Button
               onClick={handleAddCategory}
-              disabled={!newCategory.trim()}
+              disabled={
+                !newCategory.trim() ||
+                selectedNames.includes(newCategory.trim())
+              }
               size="sm"
             >
               Añadir
@@ -260,7 +417,6 @@ const Onboarding = () => {
           </div>
         </div>
 
-        {/* Categorías disponibles */}
         <div className="space-y-3">
           <h4 className="text-sm font-medium text-muted-foreground">
             Categorías disponibles:
@@ -269,7 +425,100 @@ const Onboarding = () => {
             {unselectedCategories.map((category) => (
               <button
                 key={category}
-                onClick={() => onToggle(category)}
+                onClick={() => onToggleCategory(category)}
+                className="text-left p-3 border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors text-sm"
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const SimpleCategorySelector = ({
+    availableCategories,
+    selectedCategories,
+    onToggleCategory,
+    onAddCategory,
+  }: {
+    availableCategories: string[];
+    selectedCategories: string[];
+    onToggleCategory: (category: string) => void;
+    onAddCategory: (category: string) => void;
+  }) => {
+    const [newCategory, setNewCategory] = useState("");
+
+    const handleAdd = () => {
+      const trimmed = newCategory.trim();
+      if (!trimmed || selectedCategories.includes(trimmed)) return;
+      onAddCategory(trimmed);
+      setNewCategory("");
+    };
+
+    const unselected = availableCategories.filter(
+      (cat) => !selectedCategories.includes(cat)
+    );
+
+    return (
+      <div className="space-y-6">
+        {selectedCategories.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {selectedCategories.map((category) => (
+              <Badge
+                key={category}
+                variant="secondary"
+                className="flex items-center gap-1 px-3 py-1 text-sm"
+              >
+                {category}
+                <button
+                  onClick={() => onToggleCategory(category)}
+                  className="ml-1 hover:bg-destructive hover:text-destructive-foreground rounded-full p-0.5"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground">
+            Añadir categoría personalizada:
+          </h4>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Escribe una categoría..."
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              className="flex-1"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAdd();
+                }
+              }}
+            />
+            <Button
+              onClick={handleAdd}
+              disabled={!newCategory.trim()}
+              size="sm"
+            >
+              Añadir
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-muted-foreground">
+            Categorías disponibles:
+          </h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            {unselected.map((category) => (
+              <button
+                key={category}
+                onClick={() => onToggleCategory(category)}
                 className="text-left p-3 border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors text-sm"
               >
                 {category}
@@ -314,8 +563,10 @@ const Onboarding = () => {
         <CategorySelector
           availableCategories={defaultIncomeCategories}
           selectedCategories={userProfile.incomeCategories}
-          onToggle={toggleIncomeCategory}
-          onAddCustom={addCustomIncomeCategory}
+          onToggleCategory={toggleIncomeCategory}
+          onAddCategory={addCustomIncomeCategory}
+          onAddSubcategory={addIncomeSubcategory}
+          onRemoveSubcategory={removeIncomeSubcategory}
         />
       ),
     },
@@ -328,8 +579,10 @@ const Onboarding = () => {
         <CategorySelector
           availableCategories={defaultExpenseCategories}
           selectedCategories={userProfile.expenseCategories}
-          onToggle={toggleExpenseCategory}
-          onAddCustom={addCustomExpenseCategory}
+          onToggleCategory={toggleExpenseCategory}
+          onAddCategory={addCustomExpenseCategory}
+          onAddSubcategory={addExpenseSubcategory}
+          onRemoveSubcategory={removeExpenseSubcategory}
         />
       ),
     },
@@ -339,11 +592,11 @@ const Onboarding = () => {
       description: "Selecciona los tipos de activos que posees",
       icon: <PiggyBank className="w-8 h-8 text-purple-500" />,
       component: (
-        <CategorySelector
+        <SimpleCategorySelector
           availableCategories={defaultAssetCategories}
           selectedCategories={userProfile.assetCategories}
-          onToggle={toggleAssetCategory}
-          onAddCustom={addCustomAssetCategory}
+          onToggleCategory={toggleAssetCategory}
+          onAddCategory={addCustomAssetCategory}
         />
       ),
     },

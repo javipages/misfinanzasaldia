@@ -4,6 +4,7 @@ import {
   useImperativeHandle,
   useRef,
   useState,
+  Fragment,
 } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +28,11 @@ import { useCategoryMatrix } from "@/hooks/use-category-matrix";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export type CategoryMatrixRef = {
-  openAddDialog: (categoryId?: string | null, month?: number | null) => void;
+  openAddDialog: (
+    categoryId?: string | null,
+    subcategoryId?: string | null,
+    month?: number | null
+  ) => void;
 };
 
 type Props = {
@@ -67,6 +72,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
     const {
       categories,
       entries,
+      matrix,
       values,
       isLoading,
       addEntry,
@@ -91,7 +97,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
         </button>
       );
     }
-
+    console.log(matrix);
     function SortableRow({
       id,
       children,
@@ -140,14 +146,38 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
     const [addOpen, setAddOpen] = useState(false);
     const [preset, setPreset] = useState<{
       categoryId: string | null;
+      subcategoryId: string | null;
       month: number | null;
-    }>({ categoryId: null, month: null });
+    }>({ categoryId: null, subcategoryId: null, month: null });
     const [manageOpen, setManageOpen] = useState(false);
     const [manageCtx, setManageCtx] = useState<{
       categoryId: string | null;
       categoryName: string | null;
+      subcategoryId: string | null;
+      subcategoryName: string | null;
       month: number | null; // 1-12
-    }>({ categoryId: null, categoryName: null, month: null });
+    }>({
+      categoryId: null,
+      categoryName: null,
+      subcategoryId: null,
+      subcategoryName: null,
+      month: null,
+    });
+    const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+      new Set()
+    );
+
+    const toggleCategory = (categoryId: string) => {
+      setExpandedCategories((prev) => {
+        const next = new Set(prev);
+        if (next.has(categoryId)) {
+          next.delete(categoryId);
+        } else {
+          next.add(categoryId);
+        }
+        return next;
+      });
+    };
 
     const calculateRowTotal = (data: number[]) =>
       data.reduce((s, v) => s + v, 0);
@@ -176,8 +206,16 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
     }, [values, resolvedYear]);
 
     useImperativeHandle(ref, () => ({
-      openAddDialog: (categoryId?: string | null, month?: number | null) => {
-        setPreset({ categoryId: categoryId ?? null, month: month ?? null });
+      openAddDialog: (
+        categoryId?: string | null,
+        subcategoryId?: string | null,
+        month?: number | null
+      ) => {
+        setPreset({
+          categoryId: categoryId ?? null,
+          subcategoryId: subcategoryId ?? null,
+          month: month ?? null,
+        });
         setAddOpen(true);
       },
     }));
@@ -251,7 +289,7 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
             <div className="overflow-x-auto">
               <DndContext sensors={sensors} onDragEnd={onDragEnd}>
                 <SortableContext
-                  items={categories.map((c) => c.id)}
+                  items={matrix.map((row) => row.category.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   <table className="w-full text-sm">
@@ -274,53 +312,151 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                       </tr>
                     </thead>
                     <tbody>
-                      {categories.map((category, rowIdx) => (
-                        <SortableRow
-                          key={category.id}
-                          id={category.id}
-                          className={rowIdx % 2 === 1 ? "bg-muted/80" : ""}
-                        >
-                          <td className="flex items-center gap-2 p-3 font-medium text-foreground">
-                            <RowHandle id={category.id} />
-                            <span className="flex-1">{category.name}</span>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="shrink-0 hidden md:inline-flex"
-                              onClick={() => {
-                                setPreset({
-                                  categoryId: category.id,
-                                  month: null,
-                                });
-                                setAddOpen(true);
-                              }}
-                            >
-                              +
-                            </Button>
-                          </td>
-
-                          {values[rowIdx].map((value, monthIndex) => (
-                            <td key={monthIndex} className="p-1 text-center">
-                              <div
-                                className="p-2 rounded cursor-pointer hover:bg-muted/50 font-medium"
-                                onClick={() => {
-                                  setManageCtx({
-                                    categoryId: category.id,
-                                    categoryName: category.name,
-                                    month: monthIndex + 1,
-                                  });
-                                  setManageOpen(true);
-                                }}
-                              >
-                                €{Number(value).toLocaleString()}
+                      {matrix.map((row, rowIdx) => (
+                        <Fragment key={row.category.id}>
+                          <SortableRow
+                            id={row.category.id}
+                            className={rowIdx % 2 === 1 ? "bg-muted/80" : ""}
+                          >
+                            <td className="p-3 font-medium text-foreground">
+                              <div className="flex items-center gap-2">
+                                <RowHandle id={row.category.id} />
+                                {(row.subcategories ?? []).length > 0 && (
+                                  <button
+                                    onClick={() =>
+                                      toggleCategory(row.category.id)
+                                    }
+                                    className="text-muted-foreground hover:text-foreground transition-transform duration-200"
+                                    style={{
+                                      transform: expandedCategories.has(
+                                        row.category.id
+                                      )
+                                        ? "rotate(90deg)"
+                                        : "rotate(0deg)",
+                                    }}
+                                    aria-label={
+                                      expandedCategories.has(row.category.id)
+                                        ? "Colapsar subcategorías"
+                                        : "Expandir subcategorías"
+                                    }
+                                  >
+                                    ▶
+                                  </button>
+                                )}
+                                <span className="flex-1">
+                                  {row.category.name}
+                                </span>
+                                {(row.subcategories ?? []).length > 0 && (
+                                  <span className="text-xs text-muted-foreground">
+                                    ({(row.subcategories ?? []).length})
+                                  </span>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="shrink-0 hidden md:inline-flex"
+                                  onClick={() => {
+                                    setPreset({
+                                      categoryId: row.category.id,
+                                      subcategoryId: null,
+                                      month: null,
+                                    });
+                                    setAddOpen(true);
+                                  }}
+                                >
+                                  +
+                                </Button>
                               </div>
                             </td>
-                          ))}
-                          <td className="p-3 text-center font-bold">
-                            €
-                            {calculateRowTotal(values[rowIdx]).toLocaleString()}
-                          </td>
-                        </SortableRow>
+
+                            {MONTHS.map((_, monthIndex) => (
+                              <td key={monthIndex} className="p-1 text-center">
+                                <div
+                                  className="p-2 rounded cursor-pointer hover:bg-muted/50 font-medium"
+                                  onClick={() => {
+                                    setManageCtx({
+                                      categoryId: row.category.id,
+                                      categoryName: row.category.name,
+                                      subcategoryId: null,
+                                      subcategoryName: null,
+                                      month: monthIndex + 1,
+                                    });
+                                    setManageOpen(true);
+                                  }}
+                                >
+                                  €
+                                  {Number(
+                                    row.totals[monthIndex] ?? 0
+                                  ).toLocaleString()}
+                                </div>
+                              </td>
+                            ))}
+                            <td className="p-3 text-center font-bold">
+                              €{calculateRowTotal(row.totals).toLocaleString()}
+                            </td>
+                          </SortableRow>
+
+                          {expandedCategories.has(row.category.id) &&
+                            (row.subcategories ?? []).map((sub) => (
+                              <tr
+                                key={sub.id}
+                                className="border-b border-border/50 bg-muted/20"
+                              >
+                                <td className="p-3 pl-10 text-sm text-muted-foreground">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs">•</span>
+                                    <span className="flex-1">{sub.name}</span>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="shrink-0 hidden md:inline-flex"
+                                      onClick={() => {
+                                        setPreset({
+                                          categoryId: row.category.id,
+                                          subcategoryId: sub.id,
+                                          month: null,
+                                        });
+                                        setAddOpen(true);
+                                      }}
+                                    >
+                                      +
+                                    </Button>
+                                  </div>
+                                </td>
+                                {MONTHS.map((_, monthIndex) => (
+                                  <td
+                                    key={monthIndex}
+                                    className="p-1 text-center"
+                                  >
+                                    <div
+                                      className="p-2 rounded cursor-pointer hover:bg-muted/40 text-sm"
+                                      onClick={() => {
+                                        setManageCtx({
+                                          categoryId: row.category.id,
+                                          categoryName: row.category.name,
+                                          subcategoryId: sub.id,
+                                          subcategoryName: sub.name,
+                                          month: monthIndex + 1,
+                                        });
+                                        setManageOpen(true);
+                                      }}
+                                    >
+                                      €
+                                      {Number(
+                                        sub.totals[monthIndex] ?? 0
+                                      ).toLocaleString()}
+                                    </div>
+                                  </td>
+                                ))}
+                                <td className="p-3 text-center font-medium text-muted-foreground">
+                                  €
+                                  {calculateRowTotal(
+                                    sub.totals
+                                  ).toLocaleString()}
+                                </td>
+                              </tr>
+                            ))}
+                        </Fragment>
                       ))}
                       <tr className="border-t-2 bg-muted/20">
                         <td className="p-3 font-bold">TOTAL</td>
@@ -352,10 +488,18 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
           kind={kind}
           categories={categories}
           defaultCategoryId={preset.categoryId ?? undefined}
+          defaultSubcategoryId={preset.subcategoryId ?? undefined}
           defaultMonth={preset.month ?? undefined}
-          onSubmit={async ({ categoryId, month, amount, description }) => {
+          onSubmit={async ({
+            categoryId,
+            subcategoryId,
+            month,
+            amount,
+            description,
+          }) => {
             await addEntry.mutateAsync({
               categoryId,
+              subcategoryId,
               month,
               amount,
               description: description ?? null,
@@ -373,17 +517,22 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
               (e) =>
                 e.category_id === manageCtx.categoryId &&
                 e.month === (manageCtx.month ?? 0) &&
-                e.year === resolvedYear
+                e.year === resolvedYear &&
+                (manageCtx.subcategoryId
+                  ? e.subcategory_id === manageCtx.subcategoryId
+                  : e.subcategory_id == null)
             )
             .map((e) => ({
               id: e.id,
               amount: e.amount,
               description: e.description,
             }))}
+          subcategoryName={manageCtx.subcategoryName ?? undefined}
           onCreate={async ({ amount, description }) => {
             if (!manageCtx.categoryId || !manageCtx.month) return;
             await addEntry.mutateAsync({
               categoryId: manageCtx.categoryId,
+              subcategoryId: manageCtx.subcategoryId,
               month: manageCtx.month,
               amount,
               description: description ?? null,

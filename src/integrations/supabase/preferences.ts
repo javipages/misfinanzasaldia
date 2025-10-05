@@ -1,10 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import { TABLE_USER } from "@/config/api";
 import { Json } from "@/lib/supabase";
+import type { CategorySeed } from "@/integrations/supabase/categories";
 
 export interface UserProfileSetup {
-  incomeCategories: string[];
-  expenseCategories: string[];
+  incomeCategories: CategorySeed[];
+  expenseCategories: CategorySeed[];
   assetCategories: string[];
   emailNotifications?: boolean;
 }

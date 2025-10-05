@@ -19,16 +19,33 @@ import { useUserStore } from "@/store/user";
 
 type Kind = "income" | "expense";
 
+type MatrixSubcategory = {
+  id: string;
+  category_id: string;
+  name: string;
+  display_order: number;
+};
+
+type MatrixCategory = {
+  id: string;
+  name: string;
+  display_order: number;
+  subcategories: MatrixSubcategory[];
+};
+
 const QK = {
   categories: (kind: Kind, year: number) =>
     ["categories", kind, year] as const,
   entries: (kind: Kind, year: number) => ["entries", kind, year] as const,
+  // Summary-only categories (without subcategories) must use a different key
+  categoriesSummary: (kind: Kind, year: number) =>
+    ["categories-summary", kind, year] as const,
 };
 
 export function useAllCategories() {
   const year = useUserStore((s) => s.year);
   const incomeCategoriesQuery = useQuery({
-    queryKey: QK.categories("income", year),
+    queryKey: QK.categoriesSummary("income", year),
     queryFn: async () => {
       const rows = await listIncomeCategories(year);
       return rows.map((r) => ({
@@ -40,7 +57,7 @@ export function useAllCategories() {
   });
 
   const expenseCategoriesQuery = useQuery({
-    queryKey: QK.categories("expense", year),
+    queryKey: QK.categoriesSummary("expense", year),
     queryFn: async () => {
       const rows = await listExpenseCategories(year);
       return rows.map((r) => ({
@@ -66,7 +83,7 @@ export function useCategoryMatrix(kind: Kind, year: number) {
 
   const categoriesQuery = useQuery({
     queryKey: QK.categories(kind, year),
-    queryFn: async () => {
+    queryFn: async (): Promise<MatrixCategory[]> => {
       const rows =
         kind === "income"
           ? await listIncomeCategories(year)
@@ -75,6 +92,12 @@ export function useCategoryMatrix(kind: Kind, year: number) {
         id: r.id,
         name: r.name,
         display_order: r.display_order,
+        subcategories: (r.subcategories ?? []).map((s) => ({
+          id: s.id,
+          category_id: s.category_id,
+          name: s.name,
+          display_order: s.display_order,
+        })),
       }));
     },
   });
@@ -88,19 +111,80 @@ export function useCategoryMatrix(kind: Kind, year: number) {
     },
   });
 
-  const values = useMemo(() => {
-    const cats = categoriesQuery.data ?? [];
-    const all = entriesQuery.data ?? [];
-    return cats.map((c) => {
-      const row = Array(12).fill(0) as number[];
-      all
-        .filter((v) => v.category_id === c.id)
-        .forEach((v) => {
-          row[v.month - 1] += Number(v.amount ?? 0);
-        });
-      return row;
+  const matrix = useMemo(() => {
+    const categories = [...(categoriesQuery.data ?? [])].sort(
+      (a, b) => a.display_order - b.display_order
+    );
+    const entries = entriesQuery.data ?? [];
+
+    const entriesByCategory = new Map<string, EntryRow[]>();
+    const entriesBySubcategory = new Map<string, EntryRow[]>();
+
+    for (const entry of entries) {
+      if (entry.subcategory_id) {
+        const collection = entriesBySubcategory.get(entry.subcategory_id);
+        if (collection) {
+          collection.push(entry);
+        } else {
+          entriesBySubcategory.set(entry.subcategory_id, [entry]);
+        }
+      } else {
+        const collection = entriesByCategory.get(entry.category_id);
+        if (collection) {
+          collection.push(entry);
+        } else {
+          entriesByCategory.set(entry.category_id, [entry]);
+        }
+      }
+    }
+
+    return categories.map((category) => {
+      const ownTotals = Array(12).fill(0) as number[];
+      const totals = Array(12).fill(0) as number[];
+
+      const sortedSubcategories = (category.subcategories ?? [])
+        .slice()
+        .sort((a, b) => a.display_order - b.display_order);
+
+      const subcategories = sortedSubcategories.map((sub) => {
+        const subTotals = Array(12).fill(0) as number[];
+        for (const entry of entriesBySubcategory.get(sub.id) ?? []) {
+          if (entry.category_id !== category.id) continue;
+          const idx = Math.max(0, Math.min(11, entry.month - 1));
+          const amount = Number(entry.amount ?? 0);
+          subTotals[idx] += amount;
+          totals[idx] += amount;
+        }
+        return {
+          ...sub,
+          totals: subTotals,
+        };
+      });
+
+      for (const entry of entriesByCategory.get(category.id) ?? []) {
+        const idx = Math.max(0, Math.min(11, entry.month - 1));
+        const amount = Number(entry.amount ?? 0);
+        ownTotals[idx] += amount;
+        totals[idx] += amount;
+      }
+
+      return {
+        category: {
+          id: category.id,
+          name: category.name,
+          display_order: category.display_order,
+        },
+        subcategories,
+        ownTotals,
+        totals,
+      };
     });
   }, [categoriesQuery.data, entriesQuery.data]);
+
+  const values = useMemo(
+    () => matrix.map((row) => row.totals),
+    [matrix]
+  );
 
   const swapOrder = useMutation({
     mutationFn: async ({
@@ -167,9 +251,9 @@ export function useCategoryMatrix(kind: Kind, year: number) {
     },
     onMutate: async ({ aId, aOrder, bOrder }) => {
       await qc.cancelQueries({ queryKey: QK.categories(kind, year) });
-      const prev = qc.getQueryData<
-        { id: string; name: string; display_order: number }[]
-      >(QK.categories(kind, year));
+      const prev = qc.getQueryData<MatrixCategory[]>(
+        QK.categories(kind, year)
+      );
 
       if (prev) {
         // Calculate new positions for optimistic update
@@ -212,11 +296,13 @@ export function useCategoryMatrix(kind: Kind, year: number) {
   const addEntry = useMutation({
     mutationFn: async ({
       categoryId,
+      subcategoryId,
       month,
       amount,
       description,
     }: {
       categoryId: string;
+      subcategoryId?: string | null;
       month: number; // 1-12
       amount: number;
       description?: string | null;
@@ -224,6 +310,7 @@ export function useCategoryMatrix(kind: Kind, year: number) {
       if (kind === "income") {
         return createIncomeEntry({
           category_id: categoryId,
+          subcategory_id: subcategoryId ?? null,
           year,
           month,
           amount,
@@ -232,6 +319,7 @@ export function useCategoryMatrix(kind: Kind, year: number) {
       }
       return createExpenseEntry({
         category_id: categoryId,
+        subcategory_id: subcategoryId ?? null,
         year,
         month,
         amount,
@@ -245,6 +333,7 @@ export function useCategoryMatrix(kind: Kind, year: number) {
         id: `tmp-${Math.random().toString(36).slice(2)}`,
         user_id: "",
         category_id: vars.categoryId,
+        subcategory_id: vars.subcategoryId ?? null,
         year,
         month: vars.month,
         amount: vars.amount,
@@ -275,7 +364,12 @@ export function useCategoryMatrix(kind: Kind, year: number) {
       patch: Partial<
         Pick<
           EntryRow,
-          "amount" | "description" | "month" | "category_id" | "year"
+          | "amount"
+          | "description"
+          | "month"
+          | "category_id"
+          | "subcategory_id"
+          | "year"
         >
       >;
     }) => {
@@ -331,11 +425,26 @@ export function useCategoryMatrix(kind: Kind, year: number) {
     },
   });
 
+  const sortedCategories = useMemo(
+    () =>
+      matrix.map((row) => ({
+        id: row.category.id,
+        name: row.category.name,
+        display_order: row.category.display_order,
+        subcategories: (row.subcategories ?? []).map((sub) => ({
+          id: sub.id,
+          category_id: sub.category_id,
+          name: sub.name,
+          display_order: sub.display_order,
+        })),
+      })),
+    [matrix]
+  );
+
   return {
-    categories: (categoriesQuery.data ?? [])
-      .slice()
-      .sort((a, b) => a.display_order - b.display_order),
+    categories: sortedCategories,
     entries: entriesQuery.data ?? [],
+    matrix,
     values,
     isLoading: categoriesQuery.isLoading || entriesQuery.isLoading,
     isFetching: categoriesQuery.isFetching || entriesQuery.isFetching,
