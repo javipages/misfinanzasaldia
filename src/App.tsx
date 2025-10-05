@@ -17,7 +17,9 @@ import Assets from "@/pages/Assets";
 import Investments from "@/pages/Investments";
 import Savings from "@/pages/Savings";
 import Goals from "@/pages/Goals";
-import Settings from "@/pages/Settings";
+import Settings, { SettingsHome } from "@/pages/Settings";
+import SettingsCategories from "@/pages/SettingsCategories";
+import SettingsAssets from "@/pages/SettingsAssets";
 import PublicRoute from "@/components/PublicRoute";
 
 function App() {
@@ -48,7 +50,16 @@ function App() {
               <Route path="/investments" element={<Investments />} />
               <Route path="/savings" element={<Savings />} />
               <Route path="/goals" element={<Goals />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/settings" element={<Settings />}>
+                <Route index element={<SettingsHome />} />
+                <Route path="categories" element={<SettingsCategories />} />
+                <Route path="assets" element={<SettingsAssets />} />
+              </Route>
+              <Route
+                path="/settings/categories"
+                element={<SettingsCategories />}
+              />
+              <Route path="/settings/assets" element={<SettingsAssets />} />
             </Route>
           </Route>
 
