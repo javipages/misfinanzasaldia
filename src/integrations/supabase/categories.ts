@@ -69,7 +69,10 @@ async function requireUserId(): Promise<string> {
 }
 
 async function upsertCategoryYearRow(
-  table: string,
+  table:
+    | typeof TABLE_INCOME_CATEGORIES_YEARS
+    | typeof TABLE_EXPENSE_CATEGORIES_YEARS
+    | typeof TABLE_ASSET_CATEGORIES_YEARS,
   categoryId: string,
   year: number
 ): Promise<CategoryYearRow> {
