@@ -10,16 +10,18 @@ import {
   createInvestmentValue,
   type InvestmentWithAccount,
   type InvestmentInput,
-  type AssetCategoryRow,
+  type AssetCategoryWithYearRow,
   type InvestmentSummaryByMonth,
 } from "@/integrations/supabase/categories";
+import { useUserStore } from "@/store/user";
 
 export type InvestmentItem = InvestmentWithAccount;
 
-export type InvestmentAccount = AssetCategoryRow;
+export type InvestmentAccount = AssetCategoryWithYearRow;
 
 export function useInvestments() {
   const qc = useQueryClient();
+  const year = useUserStore((s) => s.year);
 
   // Query for investments with account information
   const investmentsQuery = useQuery({
@@ -31,9 +33,9 @@ export function useInvestments() {
 
   // Query for available investment accounts
   const accountsQuery = useQuery({
-    queryKey: ["investment-accounts"],
+    queryKey: ["investment-accounts", year],
     queryFn: async (): Promise<InvestmentAccount[]> => {
-      return await listInvestmentAccounts();
+      return await listInvestmentAccounts(year);
     },
   });
 

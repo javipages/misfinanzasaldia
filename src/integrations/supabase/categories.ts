@@ -3,6 +3,9 @@ import {
   TABLE_INCOME_CATEGORIES,
   TABLE_EXPENSE_CATEGORIES,
   TABLE_ASSET_CATEGORIES,
+  TABLE_INCOME_CATEGORIES_YEARS,
+  TABLE_EXPENSE_CATEGORIES_YEARS,
+  TABLE_ASSET_CATEGORIES_YEARS,
   TABLE_ASSET_VALUES,
   TABLE_INVESTMENTS,
 } from "@/config/api";
@@ -31,52 +34,176 @@ export type AssetCategoryRow = CategoryRow & {
   type: AssetCategoryInput["type"];
 };
 
-export async function listIncomeCategories(): Promise<CategoryRow[]> {
-  const { data, error } = await supabase
-    .from(TABLE_INCOME_CATEGORIES)
-    .select("*")
-    .order("display_order", { ascending: true });
-  if (error) throw error;
-  return data ?? [];
+export type CategoryYearRow = {
+  id: string;
+  category_id: string;
+  year: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export interface CategoryYearSummary {
+  year: number;
 }
 
-export async function listExpenseCategories(): Promise<CategoryRow[]> {
+export type CategoryWithYearRow = CategoryRow & {
+  category_year_id: string;
+  year: number;
+};
+
+export type AssetCategoryWithYearRow = AssetCategoryRow & {
+  category_year_id: string;
+  year: number;
+};
+
+async function requireUserId(): Promise<string> {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (error) throw error;
+  if (!user?.id) {
+    throw new Error("User not authenticated");
+  }
+  return user.id;
+}
+
+async function upsertCategoryYearRow(
+  table: string,
+  categoryId: string,
+  year: number
+): Promise<CategoryYearRow> {
   const { data, error } = await supabase
-    .from(TABLE_EXPENSE_CATEGORIES)
-    .select("*")
+    .from(table)
+    .upsert(
+      { category_id: categoryId, year },
+      { onConflict: "category_id,year", ignoreDuplicates: false }
+    )
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CategoryYearRow;
+}
+
+type IncomeCategoryJoinRow = CategoryRow & {
+  income_categories_years: CategoryYearRow[];
+};
+
+type ExpenseCategoryJoinRow = CategoryRow & {
+  expense_categories_years: CategoryYearRow[];
+};
+
+type AssetCategoryJoinRow = AssetCategoryRow & {
+  asset_categories_years: CategoryYearRow[];
+};
+
+export async function listIncomeCategories(
+  year: number
+): Promise<CategoryWithYearRow[]> {
+  const { data, error } = await supabase
+    .from(TABLE_INCOME_CATEGORIES)
+    .select(
+      "id,user_id,name,display_order,created_at,updated_at,income_categories_years!inner(id,category_id,year,created_at,updated_at)"
+    )
+    .eq("income_categories_years.year", year)
     .order("display_order", { ascending: true });
   if (error) throw error;
-  return data ?? [];
+
+  const rows = (data as IncomeCategoryJoinRow[]) ?? [];
+  return rows.map(({ income_categories_years, ...category }) => {
+    const [yearRow] = income_categories_years ?? [];
+    if (!yearRow) {
+      throw new Error(
+        `Income category ${category.id} missing year association for ${year}`
+      );
+    }
+    return {
+      ...category,
+      category_year_id: yearRow.id,
+      year: yearRow.year,
+    } satisfies CategoryWithYearRow;
+  });
+}
+
+export async function listExpenseCategories(
+  year: number
+): Promise<CategoryWithYearRow[]> {
+  const { data, error } = await supabase
+    .from(TABLE_EXPENSE_CATEGORIES)
+    .select(
+      "id,user_id,name,display_order,created_at,updated_at,expense_categories_years!inner(id,category_id,year,created_at,updated_at)"
+    )
+    .eq("expense_categories_years.year", year)
+    .order("display_order", { ascending: true });
+  if (error) throw error;
+
+  const rows = (data as ExpenseCategoryJoinRow[]) ?? [];
+  return rows.map(({ expense_categories_years, ...category }) => {
+    const [yearRow] = expense_categories_years ?? [];
+    if (!yearRow) {
+      throw new Error(
+        `Expense category ${category.id} missing year association for ${year}`
+      );
+    }
+    return {
+      ...category,
+      category_year_id: yearRow.id,
+      year: yearRow.year,
+    } satisfies CategoryWithYearRow;
+  });
 }
 
 export async function createIncomeCategory(
-  input: CategoryInput
-): Promise<CategoryRow> {
+  input: CategoryInput,
+  year: number
+): Promise<CategoryWithYearRow> {
   const { data, error } = await supabase
     .from(TABLE_INCOME_CATEGORIES)
     .insert([{ ...input }])
     .select()
     .single();
   if (error) throw error;
-  return data!;
+  const base = data as CategoryRow;
+  const yearRow = await upsertCategoryYearRow(
+    TABLE_INCOME_CATEGORIES_YEARS,
+    base.id,
+    year
+  );
+  return {
+    ...base,
+    category_year_id: yearRow.id,
+    year: yearRow.year,
+  } satisfies CategoryWithYearRow;
 }
 
 export async function createExpenseCategory(
-  input: CategoryInput
-): Promise<CategoryRow> {
+  input: CategoryInput,
+  year: number
+): Promise<CategoryWithYearRow> {
   const { data, error } = await supabase
     .from(TABLE_EXPENSE_CATEGORIES)
     .insert([{ ...input }])
     .select()
     .single();
   if (error) throw error;
-  return data!;
+  const base = data as CategoryRow;
+  const yearRow = await upsertCategoryYearRow(
+    TABLE_EXPENSE_CATEGORIES_YEARS,
+    base.id,
+    year
+  );
+  return {
+    ...base,
+    category_year_id: yearRow.id,
+    year: yearRow.year,
+  } satisfies CategoryWithYearRow;
 }
 
 export async function updateIncomeCategory(
   id: string,
-  input: Partial<CategoryInput>
-): Promise<CategoryRow> {
+  input: Partial<CategoryInput>,
+  year: number
+): Promise<CategoryWithYearRow> {
   const { data, error } = await supabase
     .from(TABLE_INCOME_CATEGORIES)
     .update({ ...input })
@@ -84,13 +211,24 @@ export async function updateIncomeCategory(
     .select()
     .single();
   if (error) throw error;
-  return data!;
+  const base = data as CategoryRow;
+  const yearRow = await upsertCategoryYearRow(
+    TABLE_INCOME_CATEGORIES_YEARS,
+    base.id,
+    year
+  );
+  return {
+    ...base,
+    category_year_id: yearRow.id,
+    year: yearRow.year,
+  } satisfies CategoryWithYearRow;
 }
 
 export async function updateExpenseCategory(
   id: string,
-  input: Partial<CategoryInput>
-): Promise<CategoryRow> {
+  input: Partial<CategoryInput>,
+  year: number
+): Promise<CategoryWithYearRow> {
   const { data, error } = await supabase
     .from(TABLE_EXPENSE_CATEGORIES)
     .update({ ...input })
@@ -98,36 +236,253 @@ export async function updateExpenseCategory(
     .select()
     .single();
   if (error) throw error;
-  return data!;
+  const base = data as CategoryRow;
+  const yearRow = await upsertCategoryYearRow(
+    TABLE_EXPENSE_CATEGORIES_YEARS,
+    base.id,
+    year
+  );
+  return {
+    ...base,
+    category_year_id: yearRow.id,
+    year: yearRow.year,
+  } satisfies CategoryWithYearRow;
 }
 
-export async function deleteIncomeCategory(id: string): Promise<void> {
+export async function deleteIncomeCategory(
+  id: string,
+  year: number
+): Promise<void> {
   const { error } = await supabase
-    .from(TABLE_INCOME_CATEGORIES)
+    .from(TABLE_INCOME_CATEGORIES_YEARS)
     .delete()
-    .eq("id", id);
+    .eq("category_id", id)
+    .eq("year", year);
   if (error) throw error;
 }
 
-export async function deleteExpenseCategory(id: string): Promise<void> {
+export async function deleteExpenseCategory(
+  id: string,
+  year: number
+): Promise<void> {
   const { error } = await supabase
-    .from(TABLE_EXPENSE_CATEGORIES)
+    .from(TABLE_EXPENSE_CATEGORIES_YEARS)
     .delete()
-    .eq("id", id);
+    .eq("category_id", id)
+    .eq("year", year);
   if (error) throw error;
+}
+
+export async function ensureIncomeCategoryYear(
+  categoryId: string,
+  year: number
+): Promise<CategoryYearRow> {
+  return upsertCategoryYearRow(
+    TABLE_INCOME_CATEGORIES_YEARS,
+    categoryId,
+    year
+  );
+}
+
+export async function ensureExpenseCategoryYear(
+  categoryId: string,
+  year: number
+): Promise<CategoryYearRow> {
+  return upsertCategoryYearRow(
+    TABLE_EXPENSE_CATEGORIES_YEARS,
+    categoryId,
+    year
+  );
+}
+
+export async function ensureAssetCategoryYear(
+  categoryId: string,
+  year: number
+): Promise<CategoryYearRow> {
+  return upsertCategoryYearRow(
+    TABLE_ASSET_CATEGORIES_YEARS,
+    categoryId,
+    year
+  );
+}
+
+export async function listAvailableCategoryYears(): Promise<CategoryYearSummary[]> {
+  const userId = await requireUserId();
+
+  const [expenseRes, incomeRes, assetRes] = await Promise.all([
+    supabase
+      .from(TABLE_EXPENSE_CATEGORIES_YEARS)
+      .select("year, expense_categories!inner(user_id)")
+      .eq("expense_categories.user_id", userId),
+    supabase
+      .from(TABLE_INCOME_CATEGORIES_YEARS)
+      .select("year, income_categories!inner(user_id)")
+      .eq("income_categories.user_id", userId),
+    supabase
+      .from(TABLE_ASSET_CATEGORIES_YEARS)
+      .select("year, asset_categories!inner(user_id)")
+      .eq("asset_categories.user_id", userId),
+  ]);
+
+  if (expenseRes.error) throw expenseRes.error;
+  if (incomeRes.error) throw incomeRes.error;
+  if (assetRes.error) throw assetRes.error;
+
+  const yearsSet = new Set<number>();
+  for (const rows of [expenseRes.data, incomeRes.data, assetRes.data]) {
+    for (const row of rows ?? []) {
+      const year = (row as { year?: number | null }).year;
+      if (typeof year === "number") yearsSet.add(year);
+    }
+  }
+
+  if (yearsSet.size === 0) {
+    const currentYear = new Date().getFullYear();
+    yearsSet.add(currentYear);
+  }
+
+  return Array.from(yearsSet)
+    .sort((a, b) => a - b)
+    .map((year) => ({ year }));
+}
+
+export async function ensureCategoriesForYear(year: number): Promise<void> {
+  const userId = await requireUserId();
+
+  const [incomeRes, expenseRes, assetRes] = await Promise.all([
+    supabase
+      .from(TABLE_INCOME_CATEGORIES)
+      .select("id")
+      .eq("user_id", userId),
+    supabase
+      .from(TABLE_EXPENSE_CATEGORIES)
+      .select("id")
+      .eq("user_id", userId),
+    supabase
+      .from(TABLE_ASSET_CATEGORIES)
+      .select("id")
+      .eq("user_id", userId),
+  ]);
+
+  if (incomeRes.error) throw incomeRes.error;
+  if (expenseRes.error) throw expenseRes.error;
+  if (assetRes.error) throw assetRes.error;
+
+  const promises: Promise<unknown>[] = [];
+
+  for (const row of incomeRes.data ?? []) {
+    const categoryId = (row as { id?: string }).id;
+    if (categoryId) {
+      promises.push(ensureIncomeCategoryYear(categoryId, year));
+    }
+  }
+
+  for (const row of expenseRes.data ?? []) {
+    const categoryId = (row as { id?: string }).id;
+    if (categoryId) {
+      promises.push(ensureExpenseCategoryYear(categoryId, year));
+    }
+  }
+
+  for (const row of assetRes.data ?? []) {
+    const categoryId = (row as { id?: string }).id;
+    if (categoryId) {
+      promises.push(ensureAssetCategoryYear(categoryId, year));
+    }
+  }
+
+  await Promise.all(promises);
+}
+
+export async function cloneCategoriesFromYear(
+  targetYear: number,
+  sourceYear: number
+): Promise<void> {
+  const userId = await requireUserId();
+
+  const [incomeRes, expenseRes, assetRes] = await Promise.all([
+    supabase
+      .from(TABLE_INCOME_CATEGORIES_YEARS)
+      .select("category_id, income_categories!inner(user_id)")
+      .eq("income_categories.user_id", userId)
+      .eq("year", sourceYear),
+    supabase
+      .from(TABLE_EXPENSE_CATEGORIES_YEARS)
+      .select("category_id, expense_categories!inner(user_id)")
+      .eq("expense_categories.user_id", userId)
+      .eq("year", sourceYear),
+    supabase
+      .from(TABLE_ASSET_CATEGORIES_YEARS)
+      .select("category_id, asset_categories!inner(user_id)")
+      .eq("asset_categories.user_id", userId)
+      .eq("year", sourceYear),
+  ]);
+
+  if (incomeRes.error) throw incomeRes.error;
+  if (expenseRes.error) throw expenseRes.error;
+  if (assetRes.error) throw assetRes.error;
+
+  const promises: Promise<unknown>[] = [];
+
+  for (const row of incomeRes.data ?? []) {
+    const categoryId = (row as { category_id?: string }).category_id;
+    if (categoryId) {
+      promises.push(ensureIncomeCategoryYear(categoryId, targetYear));
+    }
+  }
+
+  for (const row of expenseRes.data ?? []) {
+    const categoryId = (row as { category_id?: string }).category_id;
+    if (categoryId) {
+      promises.push(ensureExpenseCategoryYear(categoryId, targetYear));
+    }
+  }
+
+  for (const row of assetRes.data ?? []) {
+    const categoryId = (row as { category_id?: string }).category_id;
+    if (categoryId) {
+      promises.push(ensureAssetCategoryYear(categoryId, targetYear));
+    }
+  }
+
+  await Promise.all(promises);
+}
+
+export async function createFreshYear(
+  year: number,
+  initialCategory: { name: string; type: "income" | "expense" | "asset" }
+): Promise<void> {
+  // Create one category with the user-provided name and type to ensure the year exists
+  if (initialCategory.type === "income") {
+    await createIncomeCategory(
+      { name: initialCategory.name, display_order: 0 },
+      year
+    );
+  } else if (initialCategory.type === "expense") {
+    await createExpenseCategory(
+      { name: initialCategory.name, display_order: 0 },
+      year
+    );
+  } else {
+    await createAssetCategory(
+      { name: initialCategory.name, type: "efectivo", display_order: 0 },
+      year
+    );
+  }
 }
 
 // Bulk operations for onboarding
 export async function bulkCreateIncomeCategories(
-  categoryNames: string[]
-): Promise<CategoryRow[]> {
+  categoryNames: string[],
+  year: number
+): Promise<CategoryWithYearRow[]> {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError) throw userError;
   const userId = userData.user?.id;
   if (!userId) throw new Error("User not authenticated");
 
   // Get existing categories to determine display_order
-  const existingCategories = await listIncomeCategories();
+  const existingCategories = await listIncomeCategories(year);
   const maxOrder = Math.max(
     ...existingCategories.map((c) => c.display_order),
     0
@@ -144,19 +499,31 @@ export async function bulkCreateIncomeCategories(
     .select();
 
   if (error) throw error;
-  return data as CategoryRow[];
+  const rows = (data as CategoryRow[]) ?? [];
+  const yearRows = await Promise.all(
+    rows.map((row) =>
+      upsertCategoryYearRow(TABLE_INCOME_CATEGORIES_YEARS, row.id, year)
+    )
+  );
+
+  return rows.map((row, index) => ({
+    ...row,
+    category_year_id: yearRows[index].id,
+    year: yearRows[index].year,
+  } satisfies CategoryWithYearRow));
 }
 
 export async function bulkCreateExpenseCategories(
-  categoryNames: string[]
-): Promise<CategoryRow[]> {
+  categoryNames: string[],
+  year: number
+): Promise<CategoryWithYearRow[]> {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError) throw userError;
   const userId = userData.user?.id;
   if (!userId) throw new Error("User not authenticated");
 
   // Get existing categories to determine display_order
-  const existingCategories = await listExpenseCategories();
+  const existingCategories = await listExpenseCategories(year);
   const maxOrder = Math.max(
     ...existingCategories.map((c) => c.display_order),
     0
@@ -173,19 +540,31 @@ export async function bulkCreateExpenseCategories(
     .select();
 
   if (error) throw error;
-  return data as CategoryRow[];
+  const rows = (data as CategoryRow[]) ?? [];
+  const yearRows = await Promise.all(
+    rows.map((row) =>
+      upsertCategoryYearRow(TABLE_EXPENSE_CATEGORIES_YEARS, row.id, year)
+    )
+  );
+
+  return rows.map((row, index) => ({
+    ...row,
+    category_year_id: yearRows[index].id,
+    year: yearRows[index].year,
+  } satisfies CategoryWithYearRow));
 }
 
 export async function bulkCreateAssetCategories(
-  categoryNames: string[]
-): Promise<AssetCategoryRow[]> {
+  categoryNames: string[],
+  year: number
+): Promise<AssetCategoryWithYearRow[]> {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError) throw userError;
   const userId = userData.user?.id;
   if (!userId) throw new Error("User not authenticated");
 
   // Get existing categories to determine display_order
-  const existingCategories = await listAssetCategories();
+  const existingCategories = await listAssetCategories(year);
   const maxOrder = Math.max(
     ...existingCategories.map((c) => c.display_order),
     0
@@ -203,7 +582,18 @@ export async function bulkCreateAssetCategories(
     .select();
 
   if (error) throw error;
-  return data as AssetCategoryRow[];
+  const rows = (data as AssetCategoryRow[]) ?? [];
+  const yearRows = await Promise.all(
+    rows.map((row) =>
+      upsertCategoryYearRow(TABLE_ASSET_CATEGORIES_YEARS, row.id, year)
+    )
+  );
+
+  return rows.map((row, index) => ({
+    ...row,
+    category_year_id: yearRows[index].id,
+    year: yearRows[index].year,
+  } satisfies AssetCategoryWithYearRow));
 }
 
 // Entry-based API
@@ -229,31 +619,62 @@ export async function listIncomeEntries(year: number): Promise<EntryRow[]> {
 }
 
 // Asset categories API
-export async function listAssetCategories(): Promise<AssetCategoryRow[]> {
+export async function listAssetCategories(
+  year: number
+): Promise<AssetCategoryWithYearRow[]> {
   const { data, error } = await supabase
     .from(TABLE_ASSET_CATEGORIES)
-    .select("*")
+    .select(
+      "id,user_id,name,type,display_order,created_at,updated_at,asset_categories_years!inner(id,category_id,year,created_at,updated_at)"
+    )
+    .eq("asset_categories_years.year", year)
     .order("display_order", { ascending: true });
   if (error) throw error;
-  return (data as AssetCategoryRow[]) ?? [];
+
+  const rows = (data as AssetCategoryJoinRow[]) ?? [];
+  return rows.map(({ asset_categories_years, ...category }) => {
+    const [yearRow] = asset_categories_years ?? [];
+    if (!yearRow) {
+      throw new Error(
+        `Asset category ${category.id} missing year association for ${year}`
+      );
+    }
+    return {
+      ...category,
+      category_year_id: yearRow.id,
+      year: yearRow.year,
+    } satisfies AssetCategoryWithYearRow;
+  });
 }
 
 export async function createAssetCategory(
-  input: AssetCategoryInput
-): Promise<AssetCategoryRow> {
+  input: AssetCategoryInput,
+  year: number
+): Promise<AssetCategoryWithYearRow> {
   const { data, error } = await supabase
     .from(TABLE_ASSET_CATEGORIES)
     .insert([{ ...input }])
     .select()
     .single();
   if (error) throw error;
-  return data as AssetCategoryRow;
+  const base = data as AssetCategoryRow;
+  const yearRow = await upsertCategoryYearRow(
+    TABLE_ASSET_CATEGORIES_YEARS,
+    base.id,
+    year
+  );
+  return {
+    ...base,
+    category_year_id: yearRow.id,
+    year: yearRow.year,
+  } satisfies AssetCategoryWithYearRow;
 }
 
 export async function updateAssetCategory(
   id: string,
-  input: Partial<Pick<AssetCategoryInput, "name" | "type" | "display_order">>
-): Promise<AssetCategoryRow> {
+  input: Partial<Pick<AssetCategoryInput, "name" | "type" | "display_order">>,
+  year: number
+): Promise<AssetCategoryWithYearRow> {
   const { data, error } = await supabase
     .from(TABLE_ASSET_CATEGORIES)
     .update({ ...input })
@@ -261,14 +682,28 @@ export async function updateAssetCategory(
     .select()
     .single();
   if (error) throw error;
-  return data as AssetCategoryRow;
+  const base = data as AssetCategoryRow;
+  const yearRow = await upsertCategoryYearRow(
+    TABLE_ASSET_CATEGORIES_YEARS,
+    base.id,
+    year
+  );
+  return {
+    ...base,
+    category_year_id: yearRow.id,
+    year: yearRow.year,
+  } satisfies AssetCategoryWithYearRow;
 }
 
-export async function deleteAssetCategory(id: string): Promise<void> {
+export async function deleteAssetCategory(
+  id: string,
+  year: number
+): Promise<void> {
   const { error } = await supabase
-    .from(TABLE_ASSET_CATEGORIES)
+    .from(TABLE_ASSET_CATEGORIES_YEARS)
     .delete()
-    .eq("id", id);
+    .eq("category_id", id)
+    .eq("year", year);
   if (error) throw error;
 }
 
@@ -705,7 +1140,9 @@ export async function deleteInvestment(id: string): Promise<void> {
 }
 
 // Get investment accounts (asset_categories with type = 'inversion' or 'cripto')
-export async function listInvestmentAccounts(): Promise<AssetCategoryRow[]> {
+export async function listInvestmentAccounts(
+  year: number
+): Promise<AssetCategoryWithYearRow[]> {
   // Get the current user
   const {
     data: { user },
@@ -717,12 +1154,28 @@ export async function listInvestmentAccounts(): Promise<AssetCategoryRow[]> {
 
   const { data, error } = await supabase
     .from(TABLE_ASSET_CATEGORIES)
-    .select("*")
+    .select(
+      "id,user_id,name,type,display_order,created_at,updated_at,asset_categories_years!inner(id,category_id,year,created_at,updated_at)"
+    )
     .eq("user_id", user.id)
+    .eq("asset_categories_years.year", year)
     .in("type", ["inversion", "cripto"])
     .order("display_order", { ascending: true });
   if (error) throw error;
-  return (data as AssetCategoryRow[]) ?? [];
+  const rows = (data as AssetCategoryJoinRow[]) ?? [];
+  return rows.map(({ asset_categories_years, ...category }) => {
+    const [yearRow] = asset_categories_years ?? [];
+    if (!yearRow) {
+      throw new Error(
+        `Investment account ${category.id} missing year association for ${year}`
+      );
+    }
+    return {
+      ...category,
+      category_year_id: yearRow.id,
+      year: yearRow.year,
+    } satisfies AssetCategoryWithYearRow;
+  });
 }
 
 // Extended investment type with account information

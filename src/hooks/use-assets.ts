@@ -27,9 +27,9 @@ export function useAssets() {
   const year = useUserStore((s) => s.year);
 
   const assetsQuery = useQuery({
-    queryKey: ["categories", "assets"],
+    queryKey: ["categories", "assets", year],
     queryFn: async (): Promise<AssetItem[]> => {
-      const data = await listAssetCategories();
+      const data = await listAssetCategories(year);
       return data.map((c) => ({
         id: c.id,
         name: c.name,
@@ -75,75 +75,78 @@ export function useAssets() {
         type,
         display_order: nextOrder(assetsQuery.data ?? []),
       };
-      return createAssetCategory(input);
+      return createAssetCategory(input, year);
     },
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["categories", "assets"] });
+      void qc.invalidateQueries({ queryKey: ["categories", "assets", year] });
     },
   });
 
   const renameAsset = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) =>
-      updateAssetCategory(id, { name }),
+      updateAssetCategory(id, { name }, year),
     onMutate: async ({ id, name }) => {
-      await qc.cancelQueries({ queryKey: ["categories", "assets"] });
-      const prev = qc.getQueryData<AssetItem[]>(["categories", "assets"]);
+      await qc.cancelQueries({ queryKey: ["categories", "assets", year] });
+      const prev = qc.getQueryData<AssetItem[]>(["categories", "assets", year]);
       if (prev) {
         qc.setQueryData<AssetItem[]>(
-          ["categories", "assets"],
+          ["categories", "assets", year],
           prev.map((c) => (c.id === id ? { ...c, name } : c))
         );
       }
       return { prev } as const;
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["categories", "assets"], ctx.prev);
+      if (ctx?.prev)
+        qc.setQueryData(["categories", "assets", year], ctx.prev);
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["categories", "assets"] });
+      void qc.invalidateQueries({ queryKey: ["categories", "assets", year] });
     },
   });
 
   const changeAssetType = useMutation({
     mutationFn: async ({ id, type }: { id: string; type: AssetType }) =>
-      updateAssetCategory(id, { type }),
+      updateAssetCategory(id, { type }, year),
     onMutate: async ({ id, type }) => {
-      await qc.cancelQueries({ queryKey: ["categories", "assets"] });
-      const prev = qc.getQueryData<AssetItem[]>(["categories", "assets"]);
+      await qc.cancelQueries({ queryKey: ["categories", "assets", year] });
+      const prev = qc.getQueryData<AssetItem[]>(["categories", "assets", year]);
       if (prev) {
         qc.setQueryData<AssetItem[]>(
-          ["categories", "assets"],
+          ["categories", "assets", year],
           prev.map((c) => (c.id === id ? { ...c, type } : c))
         );
       }
       return { prev } as const;
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["categories", "assets"], ctx.prev);
+      if (ctx?.prev)
+        qc.setQueryData(["categories", "assets", year], ctx.prev);
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["categories", "assets"] });
+      void qc.invalidateQueries({ queryKey: ["categories", "assets", year] });
     },
   });
 
   const deleteAsset = useMutation({
-    mutationFn: async (id: string) => deleteAssetCategory(id),
+    mutationFn: async (id: string) => deleteAssetCategory(id, year),
     onMutate: async (id) => {
-      await qc.cancelQueries({ queryKey: ["categories", "assets"] });
-      const prev = qc.getQueryData<AssetItem[]>(["categories", "assets"]);
+      await qc.cancelQueries({ queryKey: ["categories", "assets", year] });
+      const prev = qc.getQueryData<AssetItem[]>(["categories", "assets", year]);
       if (prev) {
         qc.setQueryData<AssetItem[]>(
-          ["categories", "assets"],
+          ["categories", "assets", year],
           prev.filter((c) => c.id !== id)
         );
       }
       return { prev } as const;
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["categories", "assets"], ctx.prev);
+      if (ctx?.prev)
+        qc.setQueryData(["categories", "assets", year], ctx.prev);
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["categories", "assets"] });
+      void qc.invalidateQueries({ queryKey: ["categories", "assets", year] });
     },
   });
 
@@ -164,15 +167,15 @@ export function useAssets() {
       const maxOrder = current.length ? Math.max(...current) : 0;
       const tempOrder = Math.max(maxOrder + 1, aOrder + 1, bOrder + 1);
       // Step 1: move A to temp
-      await updateAssetCategory(aId, { display_order: tempOrder });
+      await updateAssetCategory(aId, { display_order: tempOrder }, year);
       // Step 2: move B into A's slot
-      await updateAssetCategory(bId, { display_order: aOrder });
+      await updateAssetCategory(bId, { display_order: aOrder }, year);
       // Step 3: move A into B's slot
-      await updateAssetCategory(aId, { display_order: bOrder });
+      await updateAssetCategory(aId, { display_order: bOrder }, year);
     },
     onMutate: async ({ aId, aOrder, bId, bOrder }) => {
-      await qc.cancelQueries({ queryKey: ["categories", "assets"] });
-      const prev = qc.getQueryData<AssetItem[]>(["categories", "assets"]);
+      await qc.cancelQueries({ queryKey: ["categories", "assets", year] });
+      const prev = qc.getQueryData<AssetItem[]>(["categories", "assets", year]);
       if (prev) {
         // Optimistically swap display_order and reorder array
         const next = prev.map((c) => {
@@ -181,15 +184,16 @@ export function useAssets() {
           return c;
         });
         next.sort((a, b) => a.display_order - b.display_order);
-        qc.setQueryData<AssetItem[]>(["categories", "assets"], next);
+        qc.setQueryData<AssetItem[]>(["categories", "assets", year], next);
       }
       return { prev } as const;
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["categories", "assets"], ctx.prev);
+      if (ctx?.prev)
+        qc.setQueryData(["categories", "assets", year], ctx.prev);
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: ["categories", "assets"] });
+      void qc.invalidateQueries({ queryKey: ["categories", "assets", year] });
     },
   });
 

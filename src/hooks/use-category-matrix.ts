@@ -15,19 +15,22 @@ import {
   updateIncomeCategory,
   updateExpenseCategory,
 } from "@/integrations/supabase/categories";
+import { useUserStore } from "@/store/user";
 
 type Kind = "income" | "expense";
 
 const QK = {
-  categories: (kind: Kind) => ["categories", kind] as const,
+  categories: (kind: Kind, year: number) =>
+    ["categories", kind, year] as const,
   entries: (kind: Kind, year: number) => ["entries", kind, year] as const,
 };
 
 export function useAllCategories() {
+  const year = useUserStore((s) => s.year);
   const incomeCategoriesQuery = useQuery({
-    queryKey: QK.categories("income"),
+    queryKey: QK.categories("income", year),
     queryFn: async () => {
-      const rows = await listIncomeCategories();
+      const rows = await listIncomeCategories(year);
       return rows.map((r) => ({
         id: r.id,
         name: r.name,
@@ -37,9 +40,9 @@ export function useAllCategories() {
   });
 
   const expenseCategoriesQuery = useQuery({
-    queryKey: QK.categories("expense"),
+    queryKey: QK.categories("expense", year),
     queryFn: async () => {
-      const rows = await listExpenseCategories();
+      const rows = await listExpenseCategories(year);
       return rows.map((r) => ({
         id: r.id,
         name: r.name,
@@ -62,12 +65,12 @@ export function useCategoryMatrix(kind: Kind, year: number) {
   const qc = useQueryClient();
 
   const categoriesQuery = useQuery({
-    queryKey: QK.categories(kind),
+    queryKey: QK.categories(kind, year),
     queryFn: async () => {
       const rows =
         kind === "income"
-          ? await listIncomeCategories()
-          : await listExpenseCategories();
+          ? await listIncomeCategories(year)
+          : await listExpenseCategories(year);
       return rows.map((r) => ({
         id: r.id,
         name: r.name,
@@ -139,26 +142,34 @@ export function useCategoryMatrix(kind: Kind, year: number) {
       if (kind === "income") {
         await Promise.all(
           updates.map((update) =>
-            updateIncomeCategory(update.id, {
-              display_order: update.display_order,
-            })
+            updateIncomeCategory(
+              update.id,
+              {
+                display_order: update.display_order,
+              },
+              year
+            )
           )
         );
       } else {
         await Promise.all(
           updates.map((update) =>
-            updateExpenseCategory(update.id, {
-              display_order: update.display_order,
-            })
+            updateExpenseCategory(
+              update.id,
+              {
+                display_order: update.display_order,
+              },
+              year
+            )
           )
         );
       }
     },
     onMutate: async ({ aId, aOrder, bOrder }) => {
-      await qc.cancelQueries({ queryKey: QK.categories(kind) });
+      await qc.cancelQueries({ queryKey: QK.categories(kind, year) });
       const prev = qc.getQueryData<
         { id: string; name: string; display_order: number }[]
-      >(QK.categories(kind));
+      >(QK.categories(kind, year));
 
       if (prev) {
         // Calculate new positions for optimistic update
@@ -183,7 +194,7 @@ export function useCategoryMatrix(kind: Kind, year: number) {
               display_order: index + 1,
             }));
 
-            qc.setQueryData(QK.categories(kind), next);
+            qc.setQueryData(QK.categories(kind, year), next);
           }
         }
       }
@@ -191,10 +202,10 @@ export function useCategoryMatrix(kind: Kind, year: number) {
       return { prev } as const;
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(QK.categories(kind), ctx.prev);
+      if (ctx?.prev) qc.setQueryData(QK.categories(kind, year), ctx.prev);
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: QK.categories(kind) });
+      void qc.invalidateQueries({ queryKey: QK.categories(kind, year) });
     },
   });
 

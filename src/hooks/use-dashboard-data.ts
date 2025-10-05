@@ -65,8 +65,8 @@ export function useDashboardData(selectedMonth?: number) {
 
   // Get categories
   const categoriesQuery = useQuery({
-    queryKey: ["expense-categories"],
-    queryFn: async () => listExpenseCategories(),
+    queryKey: ["expense-categories", year],
+    queryFn: async () => listExpenseCategories(year),
   });
 
   // Get current year data

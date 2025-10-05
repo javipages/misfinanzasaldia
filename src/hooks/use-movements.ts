@@ -30,32 +30,39 @@ export interface ExportData {
 }
 
 const QK = {
-  movements: (year: number) => ["movements", year] as const,
+  movements: (year: number, token: number) =>
+    ["movements", year, token] as const,
+  incomeEntries: (year: number, token: number) =>
+    ["income-entries", year, token] as const,
+  expenseEntries: (year: number, token: number) =>
+    ["expense-entries", year, token] as const,
+  categories: (year: number, token: number) =>
+    ["movement-categories", year, token] as const,
 };
 
-export function useMovements(year: number) {
+export function useMovements(year: number, refreshToken = 0) {
   const qc = useQueryClient();
 
   const incomeQuery = useQuery({
-    queryKey: ["income-entries", year],
+    queryKey: QK.incomeEntries(year, refreshToken),
     queryFn: async (): Promise<EntryRow[]> => {
       return await listIncomeEntries(year);
     },
   });
 
   const expenseQuery = useQuery({
-    queryKey: ["expense-entries", year],
+    queryKey: QK.expenseEntries(year, refreshToken),
     queryFn: async (): Promise<EntryRow[]> => {
       return await listExpenseEntries(year);
     },
   });
 
   const categoriesQuery = useQuery({
-    queryKey: ["categories", year],
+    queryKey: QK.categories(year, refreshToken),
     queryFn: async () => {
       const [incomeCategories, expenseCategories] = await Promise.all([
-        listIncomeCategories(),
-        listExpenseCategories(),
+        listIncomeCategories(year),
+        listExpenseCategories(year),
       ]);
 
       return {
@@ -124,8 +131,10 @@ export function useMovements(year: number) {
       });
     },
     onMutate: async (vars) => {
-      await qc.cancelQueries({ queryKey: QK.movements(year) });
-      const prev = qc.getQueryData<MovementRow[]>(QK.movements(year));
+      await qc.cancelQueries({ queryKey: QK.movements(year, refreshToken) });
+      const prev = qc.getQueryData<MovementRow[]>(
+        QK.movements(year, refreshToken)
+      );
       const optimistic: MovementRow = {
         id: `tmp-${Math.random().toString(36).slice(2)}`,
         user_id: "",
@@ -139,17 +148,18 @@ export function useMovements(year: number) {
         type: vars.type,
         category_name: "",
       };
-      qc.setQueryData<MovementRow[]>(QK.movements(year), [
+      qc.setQueryData<MovementRow[]>(QK.movements(year, refreshToken), [
         optimistic,
         ...(prev ?? []),
       ]);
       return { prev } as const;
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(QK.movements(year), ctx.prev);
+      if (ctx?.prev)
+        qc.setQueryData(QK.movements(year, refreshToken), ctx.prev);
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: QK.movements(year) });
+      void qc.invalidateQueries({ queryKey: QK.movements(year, refreshToken) });
     },
   });
 
@@ -173,11 +183,13 @@ export function useMovements(year: number) {
         : await updateExpenseEntry(id, patch);
     },
     onMutate: async ({ id, patch }) => {
-      await qc.cancelQueries({ queryKey: QK.movements(year) });
-      const prev = qc.getQueryData<MovementRow[]>(QK.movements(year));
+      await qc.cancelQueries({ queryKey: QK.movements(year, refreshToken) });
+      const prev = qc.getQueryData<MovementRow[]>(
+        QK.movements(year, refreshToken)
+      );
       if (prev) {
         qc.setQueryData<MovementRow[]>(
-          QK.movements(year),
+          QK.movements(year, refreshToken),
           prev.map((movement) =>
             movement.id === id
               ? { ...movement, ...patch, updated_at: new Date().toISOString() }
@@ -188,10 +200,11 @@ export function useMovements(year: number) {
       return { prev } as const;
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(QK.movements(year), ctx.prev);
+      if (ctx?.prev)
+        qc.setQueryData(QK.movements(year, refreshToken), ctx.prev);
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: QK.movements(year) });
+      void qc.invalidateQueries({ queryKey: QK.movements(year, refreshToken) });
     },
   });
 
@@ -202,21 +215,24 @@ export function useMovements(year: number) {
         : await deleteExpenseEntry(id);
     },
     onMutate: async ({ id }) => {
-      await qc.cancelQueries({ queryKey: QK.movements(year) });
-      const prev = qc.getQueryData<MovementRow[]>(QK.movements(year));
+      await qc.cancelQueries({ queryKey: QK.movements(year, refreshToken) });
+      const prev = qc.getQueryData<MovementRow[]>(
+        QK.movements(year, refreshToken)
+      );
       if (prev) {
         qc.setQueryData<MovementRow[]>(
-          QK.movements(year),
+          QK.movements(year, refreshToken),
           prev.filter((movement) => movement.id !== id)
         );
       }
       return { prev } as const;
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev) qc.setQueryData(QK.movements(year), ctx.prev);
+      if (ctx?.prev)
+        qc.setQueryData(QK.movements(year, refreshToken), ctx.prev);
     },
     onSettled: () => {
-      void qc.invalidateQueries({ queryKey: QK.movements(year) });
+      void qc.invalidateQueries({ queryKey: QK.movements(year, refreshToken) });
     },
   });
 

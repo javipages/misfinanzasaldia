@@ -10,12 +10,18 @@ import {
   bulkCreateIncomeCategories,
   bulkCreateExpenseCategories,
   bulkCreateAssetCategories,
+  cloneCategoriesFromYear,
+  createFreshYear,
+  listAvailableCategoryYears,
 } from "@/integrations/supabase/categories";
 
 type UserState = {
   // Year management
   year: number;
+  availableYears: number[];
   setYear: (y: number) => Promise<void>;
+  refreshAvailableYears: () => Promise<void>;
+  activateYear: (y: number) => Promise<void>;
 
   // User data
   userData: UserData | null;
@@ -35,6 +41,7 @@ type UserState = {
 export const useUserStore = create<UserState>((set, get) => ({
   // Initial state
   year: new Date().getFullYear(),
+  availableYears: [],
   userData: null,
   onboardingCompleted: false,
   onboardingLoading: false,
@@ -49,6 +56,26 @@ export const useUserStore = create<UserState>((set, get) => ({
     } catch {
       // swallow errors but keep UI responsive
     }
+  },
+
+  refreshAvailableYears: async () => {
+    const summaries = await listAvailableCategoryYears();
+    const years = summaries.map((s) => s.year);
+    set({ availableYears: years });
+  },
+
+  activateYear: async (
+    y: number,
+    sourceYear?: number,
+    initialCategory?: { name: string; type: "income" | "expense" | "asset" }
+  ) => {
+    if (sourceYear) {
+      await cloneCategoriesFromYear(y, sourceYear);
+    } else if (initialCategory) {
+      await createFreshYear(y, initialCategory);
+    }
+    await get().refreshAvailableYears();
+    await get().setYear(y);
   },
 
   // User data management
@@ -70,9 +97,11 @@ export const useUserStore = create<UserState>((set, get) => ({
           onboardingCompleted: userData.onboarding_completed ?? false,
           hasHydrated: true,
         });
+        await get().refreshAvailableYears();
       } else {
         // If no user data exists, mark as hydrated but onboarding not completed
         set({ hasHydrated: true });
+        await get().refreshAvailableYears();
       }
     } finally {
       set({ onboardingLoading: false, _isHydrating: false });
@@ -83,25 +112,30 @@ export const useUserStore = create<UserState>((set, get) => ({
     set({ onboardingLoading: true });
     try {
       const currentStep = get().userData?.onboarding_step ?? 0;
+      const year = get().year;
 
       // Save categories to specific tables if they don't exist
       const promises = [];
 
       // Save income categories
       if (userProfile.incomeCategories.length > 0) {
-        promises.push(bulkCreateIncomeCategories(userProfile.incomeCategories));
+        promises.push(
+          bulkCreateIncomeCategories(userProfile.incomeCategories, year)
+        );
       }
 
       // Save expense categories
       if (userProfile.expenseCategories.length > 0) {
         promises.push(
-          bulkCreateExpenseCategories(userProfile.expenseCategories)
+          bulkCreateExpenseCategories(userProfile.expenseCategories, year)
         );
       }
 
       // Save asset categories
       if (userProfile.assetCategories.length > 0) {
-        promises.push(bulkCreateAssetCategories(userProfile.assetCategories));
+        promises.push(
+          bulkCreateAssetCategories(userProfile.assetCategories, year)
+        );
       }
 
       // Wait for all category insertions to complete

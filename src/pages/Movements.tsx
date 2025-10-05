@@ -94,7 +94,7 @@ const Movements = () => {
     deleteMovement,
     createMovement,
     updateMovement,
-  } = useMovements(year + refreshKey);
+  } = useMovements(year, refreshKey);
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editingMovement, setEditingMovement] = useState<MovementRow | null>(

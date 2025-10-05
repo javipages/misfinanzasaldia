@@ -28,11 +28,19 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
-import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useUserStore } from "@/store/user";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSidebar } from "@/components/ui/sidebar";
 import { usePrivacyStore } from "@/store/privacyStore";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { AddYearDialog } from "@/components/ui/add-year-dialog";
 
 // Elementos del menú
 
@@ -56,11 +64,15 @@ export function AppSidebar({ onStartTour }: AppSidebarProps = {}) {
   const { signOut } = useAuth();
   const location = useLocation();
   const year = useUserStore((s) => s.year);
+  const availableYears = useUserStore((s) => s.availableYears);
   const setYear = useUserStore((s) => s.setYear);
+  const refreshAvailableYears = useUserStore((s) => s.refreshAvailableYears);
+  const activateYear = useUserStore((s) => s.activateYear);
   const isMobile = useIsMobile();
   const { setOpenMobile } = useSidebar();
   const maskNumbers = usePrivacyStore((s) => s.maskNumbers);
   const toggleMaskNumbers = usePrivacyStore((s) => s.toggleMaskNumbers);
+  const [addYearDialogOpen, setAddYearDialogOpen] = useState(false);
 
   const handleLogout = async () => {
     await signOut();
@@ -72,29 +84,74 @@ export function AppSidebar({ onStartTour }: AppSidebarProps = {}) {
     }
   };
 
+  useEffect(() => {
+    if (!isMobile) {
+      void refreshAvailableYears();
+    }
+  }, [isMobile, refreshAvailableYears]);
+
+  const yearOptions = useMemo(() => {
+    return availableYears.length > 0 ? availableYears : [year];
+  }, [availableYears, year]);
+
+  const handleYearChange = useCallback(
+    async (value: string) => {
+      if (value === "__new") {
+        setAddYearDialogOpen(true);
+        return;
+      }
+
+      const parsed = Number(value);
+      if (!Number.isNaN(parsed)) {
+        void setYear(parsed);
+      }
+    },
+    [setYear]
+  );
+
+  const handleAddYearConfirm = useCallback(
+    async (
+      newYear: number,
+      sourceYear: number | null,
+      initialCategory?: { name: string; type: "income" | "expense" | "asset" }
+    ) => {
+      await activateYear(newYear, sourceYear ?? undefined, initialCategory);
+    },
+    [activateYear]
+  );
+
   return (
     <Sidebar variant="inset">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-2 w-full">
           {!isMobile && (
-            <Input
-              type="number"
-              min={2000}
-              max={3000}
-              value={year}
-              onChange={(e) => {
-                const v = Number(e.target.value || new Date().getFullYear());
-                void setYear(v);
+            <Select
+              value={String(year)}
+              onValueChange={(value) => {
+                void handleYearChange(value);
               }}
-              className="flex-1"
-            />
+            >
+              <SelectTrigger className="flex-1" data-sensitive-skip="true">
+                <SelectValue placeholder="Selecciona un año" />
+              </SelectTrigger>
+              <SelectContent>
+                {yearOptions.map((availableYear) => (
+                  <SelectItem key={availableYear} value={String(availableYear)}>
+                    {availableYear}
+                  </SelectItem>
+                ))}
+                <SelectItem value="__new">Añadir nuevo año…</SelectItem>
+              </SelectContent>
+            </Select>
           )}
           <Button
             variant="ghost"
             size="icon"
             onClick={toggleMaskNumbers}
             aria-pressed={maskNumbers}
-            aria-label={maskNumbers ? "Mostrar cantidades" : "Ocultar cantidades"}
+            aria-label={
+              maskNumbers ? "Mostrar cantidades" : "Ocultar cantidades"
+            }
             title={maskNumbers ? "Mostrar cantidades" : "Ocultar cantidades"}
             className="shrink-0"
           >
@@ -160,6 +217,13 @@ export function AppSidebar({ onStartTour }: AppSidebarProps = {}) {
           Cerrar sesión
         </Button>
       </SidebarFooter>
+      <AddYearDialog
+        open={addYearDialogOpen}
+        onClose={() => setAddYearDialogOpen(false)}
+        onConfirm={handleAddYearConfirm}
+        availableYears={availableYears}
+        suggestedYear={Math.max(...yearOptions, new Date().getFullYear()) + 1}
+      />
     </Sidebar>
   );
 }

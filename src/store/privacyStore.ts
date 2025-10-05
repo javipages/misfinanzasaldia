@@ -12,6 +12,8 @@ const STORAGE_KEY = "privacy-mask-storage";
 const BODY_MASK_CLASS = "mask-sensitive";
 const SENSITIVE_CLASS = "sensitive-number";
 const AUTO_ATTR = "data-sensitive-auto";
+const SKIP_SELECTOR = "[data-sensitive-skip=\"true\"]";
+const ALWAYS_SELECTOR = "[data-sensitive-always=\"true\"]";
 const CANDIDATE_SELECTOR = [
   "span",
   "div",
@@ -62,8 +64,10 @@ const isNumericLike = (text: string) => {
 };
 
 const shouldMaskElement = (element: HTMLElement) => {
-  if (element.dataset.sensitiveSkip === "true") return false;
   if (element.dataset.sensitiveAlways === "true") return true;
+  if (element.dataset.sensitiveSkip === "true") return false;
+  if (element.closest(ALWAYS_SELECTOR)) return true;
+  if (element.closest(SKIP_SELECTOR)) return false;
   const text = element.textContent ?? "";
   return isNumericLike(text);
 };
