@@ -131,11 +131,13 @@ export function useMovements(year: number, refreshToken = 0) {
       });
     },
     onMutate: async (vars) => {
-      await qc.cancelQueries({ queryKey: QK.movements(year, refreshToken) });
-      const prev = qc.getQueryData<MovementRow[]>(
-        QK.movements(year, refreshToken)
-      );
-      const optimistic: MovementRow = {
+      const targetKey =
+        vars.type === "income"
+          ? QK.incomeEntries(year, refreshToken)
+          : QK.expenseEntries(year, refreshToken);
+      await qc.cancelQueries({ queryKey: targetKey });
+      const prev = qc.getQueryData<EntryRow[]>(targetKey) ?? [];
+      const optimistic: EntryRow = {
         id: `tmp-${Math.random().toString(36).slice(2)}`,
         user_id: "",
         category_id: vars.categoryId,
@@ -146,21 +148,20 @@ export function useMovements(year: number, refreshToken = 0) {
         description: vars.description ?? null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        type: vars.type,
-        category_name: "",
-      };
-      qc.setQueryData<MovementRow[]>(QK.movements(year, refreshToken), [
-        optimistic,
-        ...(prev ?? []),
-      ]);
-      return { prev } as const;
+      } as EntryRow;
+      qc.setQueryData<EntryRow[]>(targetKey, [optimistic, ...prev]);
+      return { prev, targetKey } as const;
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev)
-        qc.setQueryData(QK.movements(year, refreshToken), ctx.prev);
+      if (ctx)
+        qc.setQueryData<EntryRow[]>(ctx.targetKey, ctx.prev);
     },
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: QK.movements(year, refreshToken) });
+    onSettled: (_d, _e, vars) => {
+      const targetKey =
+        vars.type === "income"
+          ? QK.incomeEntries(year, refreshToken)
+          : QK.expenseEntries(year, refreshToken);
+      void qc.invalidateQueries({ queryKey: targetKey });
     },
   });
 
@@ -183,29 +184,37 @@ export function useMovements(year: number, refreshToken = 0) {
         ? await updateIncomeEntry(id, patch)
         : await updateExpenseEntry(id, patch);
     },
-    onMutate: async ({ id, patch }) => {
-      await qc.cancelQueries({ queryKey: QK.movements(year, refreshToken) });
-      const prev = qc.getQueryData<MovementRow[]>(
-        QK.movements(year, refreshToken)
+    onMutate: async ({ id, type, patch }) => {
+      const targetKey =
+        type === "income"
+          ? QK.incomeEntries(year, refreshToken)
+          : QK.expenseEntries(year, refreshToken);
+      await qc.cancelQueries({ queryKey: targetKey });
+      const prev = qc.getQueryData<EntryRow[]>(targetKey) ?? [];
+      qc.setQueryData<EntryRow[]>(
+        targetKey,
+        prev.map((entry) =>
+          entry.id === id
+            ? ({
+                ...entry,
+                ...patch,
+                updated_at: new Date().toISOString(),
+              } as EntryRow)
+            : entry
+        )
       );
-      if (prev) {
-        qc.setQueryData<MovementRow[]>(
-          QK.movements(year, refreshToken),
-          prev.map((movement) =>
-            movement.id === id
-              ? { ...movement, ...patch, updated_at: new Date().toISOString() }
-              : movement
-          )
-        );
-      }
-      return { prev } as const;
+      return { prev, targetKey } as const;
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev)
-        qc.setQueryData(QK.movements(year, refreshToken), ctx.prev);
+      if (ctx)
+        qc.setQueryData<EntryRow[]>(ctx.targetKey, ctx.prev);
     },
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: QK.movements(year, refreshToken) });
+    onSettled: (_d, _e, { type }) => {
+      const targetKey =
+        type === "income"
+          ? QK.incomeEntries(year, refreshToken)
+          : QK.expenseEntries(year, refreshToken);
+      void qc.invalidateQueries({ queryKey: targetKey });
     },
   });
 
@@ -215,25 +224,29 @@ export function useMovements(year: number, refreshToken = 0) {
         ? await deleteIncomeEntry(id)
         : await deleteExpenseEntry(id);
     },
-    onMutate: async ({ id }) => {
-      await qc.cancelQueries({ queryKey: QK.movements(year, refreshToken) });
-      const prev = qc.getQueryData<MovementRow[]>(
-        QK.movements(year, refreshToken)
+    onMutate: async ({ id, type }) => {
+      const targetKey =
+        type === "income"
+          ? QK.incomeEntries(year, refreshToken)
+          : QK.expenseEntries(year, refreshToken);
+      await qc.cancelQueries({ queryKey: targetKey });
+      const prev = qc.getQueryData<EntryRow[]>(targetKey) ?? [];
+      qc.setQueryData<EntryRow[]>(
+        targetKey,
+        prev.filter((entry) => entry.id !== id)
       );
-      if (prev) {
-        qc.setQueryData<MovementRow[]>(
-          QK.movements(year, refreshToken),
-          prev.filter((movement) => movement.id !== id)
-        );
-      }
-      return { prev } as const;
+      return { prev, targetKey } as const;
     },
     onError: (_e, _v, ctx) => {
-      if (ctx?.prev)
-        qc.setQueryData(QK.movements(year, refreshToken), ctx.prev);
+      if (ctx)
+        qc.setQueryData<EntryRow[]>(ctx.targetKey, ctx.prev);
     },
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: QK.movements(year, refreshToken) });
+    onSettled: (_d, _e, { type }) => {
+      const targetKey =
+        type === "income"
+          ? QK.incomeEntries(year, refreshToken)
+          : QK.expenseEntries(year, refreshToken);
+      void qc.invalidateQueries({ queryKey: targetKey });
     },
   });
 
