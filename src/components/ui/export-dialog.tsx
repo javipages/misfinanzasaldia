@@ -112,14 +112,16 @@ export function ExportDialog({
             <Label className="text-sm font-medium">Tipo de datos</Label>
             <div className="grid grid-cols-1 gap-3">
               {exportTypeOptions.map((option) => (
-                <div
+                <button
                   key={option.value}
-                  className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+                  type="button"
+                  className={`flex items-center p-3 border rounded-lg transition-colors text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                     exportType === option.value
                       ? "border-primary bg-primary/5"
                       : "border-border hover:border-primary/50"
                   }`}
                   onClick={() => setExportType(option.value)}
+                  aria-pressed={exportType === option.value}
                 >
                   <div className="h-5 w-5 mr-3 rounded-full bg-primary/20 flex items-center justify-center">
                     <div
@@ -136,7 +138,7 @@ export function ExportDialog({
                       {option.description}
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -150,14 +152,16 @@ export function ExportDialog({
               {formatOptions.map((option) => {
                 const IconComponent = option.icon;
                 return (
-                  <div
+                  <button
                     key={option.value}
-                    className={`flex items-center p-3 border rounded-lg cursor-pointer transition-colors ${
+                    type="button"
+                    className={`flex items-center p-3 border rounded-lg transition-colors text-left w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                       format === option.value
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/50"
                     }`}
                     onClick={() => setFormat(option.value)}
+                    aria-pressed={format === option.value}
                   >
                     <IconComponent className="h-5 w-5 mr-3 text-primary" />
                     <div className="flex-1">
@@ -179,7 +183,7 @@ export function ExportDialog({
                         )}
                       </div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>

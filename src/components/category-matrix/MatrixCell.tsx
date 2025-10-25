@@ -32,10 +32,12 @@ export function MatrixCell({
 
   return (
     <td className={`p-1 text-center ${className}`}>
-      <div
-        className="p-2 rounded cursor-pointer hover:bg-muted/50 font-medium transition-colors"
+      <button
+        type="button"
+        className="w-full p-2 rounded font-medium transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-default"
         style={{ backgroundColor }}
         onClick={onClick}
+        disabled={!onClick}
       >
         <div className="flex flex-col items-center gap-0.5">
           <span>{Number(value).toLocaleString()} €</span>
@@ -54,7 +56,7 @@ export function MatrixCell({
             </span>
           )}
         </div>
-      </div>
+      </button>
     </td>
   );
 }

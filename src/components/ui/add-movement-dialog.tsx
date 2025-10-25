@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -60,6 +60,7 @@ export function AddMovementDialog({
     defaultDescription ?? ""
   );
   const [saving, setSaving] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -69,6 +70,9 @@ export function AddMovementDialog({
       setMonth(defaultMonth ?? new Date().getMonth() + 1);
       setAmount(defaultAmount != null ? String(defaultAmount) : "");
       setDescription(defaultDescription ?? "");
+      requestAnimationFrame(() => {
+        dialogRef.current?.focus();
+      });
     }
   }, [
     open,
@@ -79,6 +83,18 @@ export function AddMovementDialog({
     defaultDescription,
   ]);
 
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
 
   const availableCategories =
@@ -87,6 +103,24 @@ export function AddMovementDialog({
   const title = isEditing ? "Editar movimiento" : "Añadir movimiento";
   const buttonText = type === "income" ? "Ingreso" : "Gasto";
 
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!categoryId || !month || !amount) return;
+    setSaving(true);
+    try {
+      await onSubmit({
+        type,
+        categoryId,
+        month,
+        amount: Number(amount || 0),
+        description: description || null,
+      });
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
@@ -94,129 +128,132 @@ export function AddMovementDialog({
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative bg-background rounded-md shadow-lg w-full max-w-md mx-4 p-4 space-y-4">
-        <h2 className="text-lg font-semibold">{title}</h2>
+      <div
+        ref={dialogRef}
+        className="relative bg-background rounded-md shadow-lg w-full max-w-md mx-4 p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-movement-dialog-title"
+        tabIndex={-1}
+      >
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <h2 id="add-movement-dialog-title" className="text-lg font-semibold">
+            {title}
+          </h2>
 
-        {/* Tipo de movimiento */}
-        <div className="space-y-2">
-          <label className="text-sm">Tipo de movimiento</label>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant={type === "income" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setType("income")}
-              className="flex-1"
-            >
-              <Badge variant="default" className="mr-2">
-                ↗
-              </Badge>
-              Ingreso
-            </Button>
-            <Button
-              type="button"
-              variant={type === "expense" ? "destructive" : "outline"}
-              size="sm"
-              onClick={() => setType("expense")}
-              className="flex-1"
-            >
-              <Badge variant="destructive" className="mr-2">
-                ↘
-              </Badge>
-              Gasto
-            </Button>
-          </div>
-        </div>
-
-        {/* Categoría */}
-        <div className="space-y-2">
-          <label className="text-sm">Categoría</label>
-          <Select value={categoryId} onValueChange={(v) => setCategoryId(v)}>
-            <SelectTrigger>
-              <SelectValue
-                placeholder={`Selecciona categoría de ${buttonText.toLowerCase()}`}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {availableCategories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Mes y cantidad */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {/* Tipo de movimiento */}
           <div className="space-y-2">
-            <label className="text-sm">Mes</label>
-            <Select
-              value={String(month)}
-              onValueChange={(v) => setMonth(Number(v))}
-            >
+            <label className="text-sm">Tipo de movimiento</label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={type === "income" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setType("income")}
+                className="flex-1"
+                aria-pressed={type === "income"}
+              >
+                <Badge variant="default" className="mr-2">
+                  ↗
+                </Badge>
+                Ingreso
+              </Button>
+              <Button
+                type="button"
+                variant={type === "expense" ? "destructive" : "outline"}
+                size="sm"
+                onClick={() => setType("expense")}
+                className="flex-1"
+                aria-pressed={type === "expense"}
+              >
+                <Badge variant="destructive" className="mr-2">
+                  ↘
+                </Badge>
+                Gasto
+              </Button>
+            </div>
+          </div>
+
+          {/* Categoría */}
+          <div className="space-y-2">
+            <label className="text-sm">Categoría</label>
+            <Select value={categoryId} onValueChange={(v) => setCategoryId(v)}>
               <SelectTrigger>
-                <SelectValue placeholder="Mes" />
+                <SelectValue
+                  placeholder={`Selecciona categoría de ${buttonText.toLowerCase()}`}
+                />
               </SelectTrigger>
               <SelectContent>
-                {MONTHS.map((m, idx) => (
-                  <SelectItem key={m} value={String(idx + 1)}>
-                    {m}
+                {availableCategories.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
+          {/* Mes y cantidad */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm">Mes</label>
+              <Select
+                value={String(month)}
+                onValueChange={(v) => setMonth(Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Mes" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTHS.map((m, idx) => (
+                    <SelectItem key={m} value={String(idx + 1)}>
+                      {m}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm">Cantidad (€)</label>
+              <Input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                required
+                inputMode="decimal"
+                aria-required="true"
+              />
+            </div>
+          </div>
+
+          {/* Descripción */}
           <div className="space-y-2">
-            <label className="text-sm">Cantidad (€)</label>
+            <label className="text-sm">Descripción (opcional)</label>
             <Input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Añade una nota o detalle"
             />
           </div>
-        </div>
 
-        {/* Descripción */}
-        <div className="space-y-2">
-          <label className="text-sm">Descripción (opcional)</label>
-          <Input
-            type="text"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Añade una nota o detalle"
-          />
-        </div>
-
-        {/* Botones */}
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={async () => {
-              if (!categoryId || !month) return;
-              setSaving(true);
-              try {
-                await onSubmit({
-                  type,
-                  categoryId,
-                  month,
-                  amount: Number(amount || 0),
-                  description: description || null,
-                });
-                onClose();
-              } finally {
-                setSaving(false);
-              }
-            }}
-            disabled={saving || !categoryId || !amount}
-            variant={type === "income" ? "default" : "destructive"}
-          >
-            {isEditing ? "Actualizar" : "Guardar"} {buttonText}
-          </Button>
-        </div>
+          {/* Botones */}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" type="button" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={saving || !categoryId || !amount}
+              variant={type === "income" ? "default" : "destructive"}
+            >
+              {saving
+                ? "Guardando..."
+                : `${isEditing ? "Actualizar" : "Guardar"} ${buttonText}`}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );

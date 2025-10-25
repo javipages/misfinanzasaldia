@@ -111,11 +111,21 @@ export function InvestmentSelectionDialog({
               return (
                 <Card
                   key={investment.id}
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     onSelectInvestment(investment);
                     setSearchTerm("");
                   }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onSelectInvestment(investment);
+                      setSearchTerm("");
+                    }
+                  }}
+                  aria-label={`Seleccionar ${investment.name}`}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">

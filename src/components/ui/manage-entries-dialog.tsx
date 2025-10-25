@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MONTHS } from "@/utils/constants";
@@ -43,14 +43,30 @@ export function ManageEntriesDialog({
   const [local, setLocal] = useState<EditableEntry[]>(entries);
   const [newAmount, setNewAmount] = useState<string>("");
   const [newDesc, setNewDesc] = useState<string>("");
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
       setLocal(entries);
       setNewAmount("");
       setNewDesc("");
+      requestAnimationFrame(() => {
+        dialogRef.current?.focus();
+      });
     }
   }, [open, entries]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -59,6 +75,31 @@ export function ManageEntriesDialog({
     ? `${categoryName} · ${subcategoryName}`
     : categoryName;
 
+  const handleExistingKeyDown = async (
+    event: React.KeyboardEvent<HTMLInputElement>,
+    entryId: string
+  ) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const current = local.find((x) => x.id === entryId);
+    if (!current) return;
+    await onUpdate(entryId, {
+      amount: current.amount,
+      description: current.description ?? null,
+    });
+  };
+
+  const handleCreateSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!newAmount) return;
+    await onCreate({
+      amount: Number(newAmount || 0),
+      description: newDesc ? newDesc : null,
+    });
+    setNewAmount("");
+    setNewDesc("");
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
@@ -66,9 +107,16 @@ export function ManageEntriesDialog({
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative bg-background rounded-md shadow-lg w-full max-w-lg mx-4 p-4 space-y-4">
+      <div
+        ref={dialogRef}
+        className="relative bg-background rounded-md shadow-lg w-full max-w-lg mx-4 p-4 space-y-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="manage-entries-dialog-title"
+        tabIndex={-1}
+      >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold">
+          <h2 id="manage-entries-dialog-title" className="text-lg font-semibold">
             {title} · {context} · {MONTHS[month - 1]}
           </h2>
           <Button
@@ -99,6 +147,7 @@ export function ManageEntriesDialog({
                       )
                     )
                   }
+                  onKeyDown={(ev) => void handleExistingKeyDown(ev, e.id)}
                 />
               </div>
               <div className="md:col-span-4">
@@ -115,6 +164,7 @@ export function ManageEntriesDialog({
                       )
                     )
                   }
+                  onKeyDown={(ev) => void handleExistingKeyDown(ev, e.id)}
                 />
               </div>
               <div className="flex justify-start gap-2 md:col-span-4 md:justify-end">
@@ -145,7 +195,10 @@ export function ManageEntriesDialog({
         </div>
 
         <div className="border-t pt-3">
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-12 md:items-center">
+          <form
+            className="grid grid-cols-1 gap-2 md:grid-cols-12 md:items-center"
+            onSubmit={handleCreateSubmit}
+          >
             <div className="md:col-span-4">
               <Input
                 placeholder="Descripción"
@@ -159,24 +212,15 @@ export function ManageEntriesDialog({
                 placeholder="Cantidad"
                 value={newAmount}
                 onChange={(e) => setNewAmount(e.target.value)}
+                required
               />
             </div>
             <div className="flex justify-start md:col-span-4 md:justify-end">
-              <Button
-                onClick={async () => {
-                  await onCreate({
-                    amount: Number(newAmount || 0),
-                    description: newDesc ? newDesc : null,
-                  });
-                  setNewAmount("");
-                  setNewDesc("");
-                }}
-                disabled={!newAmount}
-              >
+              <Button type="submit" disabled={!newAmount}>
                 Añadir
               </Button>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>

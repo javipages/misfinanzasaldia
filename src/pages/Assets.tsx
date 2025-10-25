@@ -273,12 +273,14 @@ const Assets = () => {
                                       }}
                                     />
                                   ) : (
-                                    <div
-                                      className="p-3 rounded-lg bg-muted/50 cursor-pointer text-sm font-medium text-primary hover:bg-muted/70 text-center transition-colors"
-                                      onClick={() => setEditingCell(cellKey)}
-                                    >
-                                      €{value.toLocaleString()}
-                                    </div>
+                                  <button
+                                    type="button"
+                                    className="w-full p-3 rounded-lg bg-muted/50 text-sm font-medium text-primary hover:bg-muted/70 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                    onClick={() => setEditingCell(cellKey)}
+                                    aria-label={`Editar ${category.name} en ${monthName}`}
+                                  >
+                                    €{value.toLocaleString()}
+                                  </button>
                                   )}
                                 </div>
                               );
@@ -404,12 +406,14 @@ const Assets = () => {
                                   }}
                                 />
                               ) : (
-                                <div
-                                  className="p-2 rounded cursor-pointer text-xs font-medium text-primary hover:bg-muted/50 sm:text-sm"
+                                <button
+                                  type="button"
+                                  className="w-full p-2 rounded text-xs font-medium text-primary hover:bg-muted/50 sm:text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                                   onClick={() => setEditingCell(cellKey)}
+                                  aria-label={`Editar ${category.name} en ${MONTHS[monthIndex]}`}
                                 >
                                   €{value.toLocaleString()}
-                                </div>
+                                </button>
                               )}
                             </td>
                           );

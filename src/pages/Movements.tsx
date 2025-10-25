@@ -573,10 +573,21 @@ const Movements = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead
-                      className="cursor-pointer hover:bg-muted/50 min-w-[120px]"
-                      onClick={() => handleSort("date")}
+                      className="min-w-[120px]"
+                      aria-sort={
+                        filterState.sortField === "date"
+                          ? filterState.sortDirection === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : "none"
+                      }
                     >
-                      <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("date")}
+                        className="flex w-full items-center gap-1 rounded px-2 py-1 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label="Ordenar por fecha"
+                      >
                         Fecha
                         <ArrowUpDown
                           className={`h-4 w-4 ${
@@ -594,13 +605,24 @@ const Movements = () => {
                             )}
                           </div>
                         )}
-                      </div>
+                      </button>
                     </TableHead>
                     <TableHead
-                      className="cursor-pointer hover:bg-muted/50 min-w-[100px]"
-                      onClick={() => handleSort("type")}
+                      className="min-w-[100px]"
+                      aria-sort={
+                        filterState.sortField === "type"
+                          ? filterState.sortDirection === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : "none"
+                      }
                     >
-                      <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("type")}
+                        className="flex w-full items-center gap-1 rounded px-2 py-1 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label="Ordenar por tipo"
+                      >
                         Tipo
                         <ArrowUpDown
                           className={`h-4 w-4 ${
@@ -618,13 +640,24 @@ const Movements = () => {
                             )}
                           </div>
                         )}
-                      </div>
+                      </button>
                     </TableHead>
                     <TableHead
-                      className="cursor-pointer hover:bg-muted/50 min-w-[150px]"
-                      onClick={() => handleSort("category")}
+                      className="min-w-[150px]"
+                      aria-sort={
+                        filterState.sortField === "category"
+                          ? filterState.sortDirection === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : "none"
+                      }
                     >
-                      <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("category")}
+                        className="flex w-full items-center gap-1 rounded px-2 py-1 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label="Ordenar por categoría"
+                      >
                         Categoría
                         <ArrowUpDown
                           className={`h-4 w-4 ${
@@ -642,13 +675,24 @@ const Movements = () => {
                             )}
                           </div>
                         )}
-                      </div>
+                      </button>
                     </TableHead>
                     <TableHead
-                      className="cursor-pointer hover:bg-muted/50 min-w-[200px]"
-                      onClick={() => handleSort("description")}
+                      className="min-w-[200px]"
+                      aria-sort={
+                        filterState.sortField === "description"
+                          ? filterState.sortDirection === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : "none"
+                      }
                     >
-                      <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("description")}
+                        className="flex w-full items-center gap-1 rounded px-2 py-1 text-left hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label="Ordenar por descripción"
+                      >
                         Descripción
                         <ArrowUpDown
                           className={`h-4 w-4 ${
@@ -666,13 +710,24 @@ const Movements = () => {
                             )}
                           </div>
                         )}
-                      </div>
+                      </button>
                     </TableHead>
                     <TableHead
-                      className="cursor-pointer hover:bg-muted/50 text-right min-w-[120px]"
-                      onClick={() => handleSort("amount")}
+                      className="text-right min-w-[120px]"
+                      aria-sort={
+                        filterState.sortField === "amount"
+                          ? filterState.sortDirection === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : "none"
+                      }
                     >
-                      <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("amount")}
+                        className="flex w-full items-center justify-end gap-1 rounded px-2 py-1 text-right hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label="Ordenar por cantidad"
+                      >
                         Cantidad
                         <ArrowUpDown
                           className={`h-4 w-4 ${
@@ -690,7 +745,7 @@ const Movements = () => {
                             )}
                           </div>
                         )}
-                      </div>
+                      </button>
                     </TableHead>
                     <TableHead className="w-[120px]">Acciones</TableHead>
                   </TableRow>
