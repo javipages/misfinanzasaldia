@@ -163,6 +163,10 @@ const Assets = () => {
       .filter((cat) => cat.type === type)
       .reduce((sum, cat) => sum + (cat.data[lastMonthIndex] ?? 0), 0);
 
+  function formatEuro(value: number) {
+    return `${value.toLocaleString()} €`;
+  }
+
   const handleCellEdit = async (
     categoryId: string,
     monthIndex: number,
@@ -273,14 +277,14 @@ const Assets = () => {
                                       }}
                                     />
                                   ) : (
-                                  <button
-                                    type="button"
-                                    className="w-full p-3 rounded-lg bg-muted/50 text-sm font-medium text-primary hover:bg-muted/70 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                                    onClick={() => setEditingCell(cellKey)}
-                                    aria-label={`Editar ${category.name} en ${monthName}`}
-                                  >
-                                    €{value.toLocaleString()}
-                                  </button>
+                                    <button
+                                      type="button"
+                                      className="w-full p-3 rounded-lg bg-muted/50 text-sm font-medium text-primary hover:bg-muted/70 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                      onClick={() => setEditingCell(cellKey)}
+                                      aria-label={`Editar ${category.name} en ${monthName}`}
+                                    >
+                                      {formatEuro(value)}
+                                    </button>
                                   )}
                                 </div>
                               );
@@ -309,7 +313,7 @@ const Assets = () => {
                         {MONTHS[monthIndex]}
                       </div>
                       <div className="text-sm font-bold text-primary">
-                        €{calculateColumnTotal(monthIndex).toLocaleString()}
+                        {formatEuro(calculateColumnTotal(monthIndex))}
                       </div>
                     </div>
                   ))}
@@ -412,7 +416,7 @@ const Assets = () => {
                                   onClick={() => setEditingCell(cellKey)}
                                   aria-label={`Editar ${category.name} en ${MONTHS[monthIndex]}`}
                                 >
-                                  €{value.toLocaleString()}
+                                  {formatEuro(value)}
                                 </button>
                               )}
                             </td>
@@ -431,7 +435,7 @@ const Assets = () => {
                         key={monthIndex}
                         className="p-3 text-center font-bold text-primary"
                       >
-                        €{calculateColumnTotal(monthIndex).toLocaleString()}
+                        {formatEuro(calculateColumnTotal(monthIndex))}
                       </td>
                     ))}
                     {/* No global total cell */}
@@ -447,7 +451,7 @@ const Assets = () => {
         <Card className="shadow-card">
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-info">
-              €{totalByTypeLastMonth("cuenta_bancaria").toLocaleString()}
+              {formatEuro(totalByTypeLastMonth("cuenta_bancaria"))}
             </div>
             <div className="text-sm text-muted-foreground">
               Cuentas bancarias
@@ -457,7 +461,7 @@ const Assets = () => {
         <Card className="shadow-card">
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-success">
-              €{totalByTypeLastMonth("inversion").toLocaleString()}
+              {formatEuro(totalByTypeLastMonth("inversion"))}
             </div>
             <div className="text-sm text-muted-foreground">Inversiones</div>
           </CardContent>
@@ -465,7 +469,7 @@ const Assets = () => {
         <Card className="shadow-card">
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-muted-foreground">
-              €{totalByTypeLastMonth("efectivo").toLocaleString()}
+              {formatEuro(totalByTypeLastMonth("efectivo"))}
             </div>
             <div className="text-sm text-muted-foreground">Efectivo</div>
           </CardContent>
@@ -473,10 +477,12 @@ const Assets = () => {
         <Card className="shadow-card">
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-primary">
-              €
-              {assetCategories
-                .reduce((sum, cat) => sum + (cat.data[lastMonthIndex] ?? 0), 0)
-                .toLocaleString()}
+              {formatEuro(
+                assetCategories.reduce(
+                  (sum, cat) => sum + (cat.data[lastMonthIndex] ?? 0),
+                  0
+                )
+              )}
             </div>
             <div className="text-sm text-muted-foreground">
               Patrimonio total

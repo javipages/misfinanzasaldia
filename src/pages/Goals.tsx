@@ -41,6 +41,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 const Goals = () => {
   const { goals, loading, error, createGoal, updateGoal, deleteGoal } =
     useGoals();
+  function formatEuro(value: number) {
+    return `${value.toLocaleString()} €`;
+  }
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [formData, setFormData] = useState({
@@ -245,7 +248,7 @@ const Goals = () => {
     ) {
       return `${value.toFixed(0)}%`;
     }
-    return `€${Math.round(value).toLocaleString()}`;
+    return formatEuro(Math.round(value));
   };
 
   const generateGoalName = (
@@ -290,20 +293,14 @@ const Goals = () => {
           count={4}
           columnsClassName="md:grid-cols-2 lg:grid-cols-4"
         />
-        <ContentCardSkeleton
-          headerWidth="w-72"
-          contentClassName="space-y-4"
-        >
+        <ContentCardSkeleton headerWidth="w-72" contentClassName="space-y-4">
           <Skeleton className="h-4 w-40" />
           <TableSkeleton
             columns={6}
             columnClassName="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6"
           />
         </ContentCardSkeleton>
-        <ContentCardSkeleton
-          headerWidth="w-56"
-          contentClassName="space-y-4"
-        >
+        <ContentCardSkeleton headerWidth="w-56" contentClassName="space-y-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             {Array.from({ length: 4 }).map((_, idx) => (
               <div
@@ -456,11 +453,7 @@ const Goals = () => {
                 <Label htmlFor="repeat_yearly">Repetir cada año</Label>
               </div>
               <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={closeDialog}
-                >
+                <Button type="button" variant="outline" onClick={closeDialog}>
                   Cancelar
                 </Button>
                 <Button type="submit">
@@ -518,7 +511,7 @@ const Goals = () => {
                         {goal.category === "savings_ratio" ||
                         goal.target_type === "percentage"
                           ? `${goal.target_amount.toLocaleString()}%`
-                          : `€${goal.target_amount.toLocaleString()}`}
+                          : `${goal.target_amount.toLocaleString()} €`}
                       </span>
                     </div>
                   </div>
@@ -612,7 +605,7 @@ const Goals = () => {
                             {goal.category === "savings_ratio" ||
                             goal.target_type === "percentage"
                               ? `${goal.target_amount.toLocaleString()}%`
-                              : `€${goal.target_amount.toLocaleString()}`}
+                              : `${goal.target_amount.toLocaleString()} €`}
                           </td>
                           <td className="p-3 text-center font-medium text-foreground">
                             {formatValue(goal, current)}
@@ -645,9 +638,9 @@ const Goals = () => {
                               {goal.category === "savings_ratio" ||
                               goal.target_type === "percentage"
                                 ? `${Math.abs(remaining).toFixed(0)}%`
-                                : `€${Math.abs(
+                                : `${Math.abs(
                                     Math.round(remaining)
-                                  ).toLocaleString()}`}
+                                  ).toLocaleString()} €`}
                             </span>
                           </td>
                           <td className="p-3 text-center">
@@ -735,10 +728,9 @@ const Goals = () => {
                             </span>
                           ) : (
                             <span className="font-medium text-warning">
-                              €
-                              {Math.max(0, Math.round(monthlyNeeded))
-                                .toString()
-                                .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                              {formatEuro(
+                                Math.max(0, Math.round(monthlyNeeded))
+                              )}
                               /mes
                             </span>
                           )}

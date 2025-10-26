@@ -50,6 +50,10 @@ const Savings = () => {
     ? (calculateTotal / savingsGoal) * 100
     : 0;
 
+  function formatEuro(value: number) {
+    return `${value.toLocaleString()} €`;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -156,12 +160,12 @@ const Savings = () => {
                   {savingsData.map((value, monthIndex) => (
                     <td key={monthIndex} className="p-1 text-center">
                       <div className="p-3 rounded text-success font-medium">
-                        €{value.toLocaleString()}
+                        {formatEuro(value)}
                       </div>
                     </td>
                   ))}
                   <td className="p-3 text-center font-bold text-success text-lg">
-                    €{calculateTotal.toLocaleString()}
+                    {formatEuro(calculateTotal)}
                   </td>
                 </tr>
               </tbody>
@@ -282,7 +286,7 @@ const Savings = () => {
                     Ahorro actual
                   </span>
                   <span className="font-medium">
-                    €{calculateTotal.toLocaleString()}
+                    {formatEuro(calculateTotal)}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -290,10 +294,9 @@ const Savings = () => {
                     Proyección anual
                   </span>
                   <span className="font-medium text-info">
-                    €
-                    {(Math.max(0, calculateAverage) * 12)
-                      .toFixed(0)
-                      .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                    {formatEuro(
+                      Number((Math.max(0, calculateAverage) * 12).toFixed(0))
+                    )}
                   </span>
                 </div>
                 {savingsGoal && (
@@ -302,7 +305,7 @@ const Savings = () => {
                       Falta para objetivo
                     </span>
                     <span className="font-medium text-warning">
-                      €{(savingsGoal - calculateTotal).toLocaleString()}
+                      {formatEuro(savingsGoal - calculateTotal)}
                     </span>
                   </div>
                 )}

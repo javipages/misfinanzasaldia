@@ -106,11 +106,13 @@ export function AddValueDialog({
     if (!categoryId || !month) return;
     setSaving(true);
     try {
+      // Accept both comma and dot as decimal separator
+      const normalizedAmount = (amount ?? "").replace(",", ".");
       await onSubmit({
         categoryId,
         subcategoryId: subcategoryId === NONE ? null : subcategoryId,
         month,
-        amount: Number(amount || 0),
+        amount: Number(normalizedAmount || 0),
         description: description || null,
       });
       onClose();
@@ -211,12 +213,14 @@ export function AddValueDialog({
             <div className="space-y-2">
               <label className="text-sm">Cantidad (€)</label>
               <Input
-                type="number"
+                // Keep type text to allow comma input; we normalize on submit
+                type="text"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 required
                 inputMode="decimal"
                 aria-required="true"
+                placeholder="0,00"
               />
             </div>
           </div>

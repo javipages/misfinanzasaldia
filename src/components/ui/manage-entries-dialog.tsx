@@ -89,11 +89,14 @@ export function ManageEntriesDialog({
     });
   };
 
-  const handleCreateSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault();
     if (!newAmount) return;
+    const normalizedNew = (newAmount ?? "").replace(",", ".");
     await onCreate({
-      amount: Number(newAmount || 0),
+      amount: Number(normalizedNew || 0),
       description: newDesc ? newDesc : null,
     });
     setNewAmount("");
@@ -116,7 +119,10 @@ export function ManageEntriesDialog({
         tabIndex={-1}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 id="manage-entries-dialog-title" className="text-lg font-semibold">
+          <h2
+            id="manage-entries-dialog-title"
+            className="text-lg font-semibold"
+          >
             {title} · {context} · {MONTHS[month - 1]}
           </h2>
           <Button
@@ -152,14 +158,20 @@ export function ManageEntriesDialog({
               </div>
               <div className="md:col-span-4">
                 <Input
-                  type="number"
+                  // Allow comma input; normalize on save/Enter
+                  type="text"
                   placeholder="Cantidad"
                   value={String(e.amount)}
                   onChange={(ev) =>
                     setLocal((prev) =>
                       prev.map((x) =>
                         x.id === e.id
-                          ? { ...x, amount: Number(ev.target.value || 0) }
+                          ? {
+                              ...x,
+                              amount: Number(
+                                (ev.target.value ?? "").replace(",", ".") || 0
+                              ),
+                            }
                           : x
                       )
                     )
@@ -208,7 +220,8 @@ export function ManageEntriesDialog({
             </div>
             <div className="md:col-span-4">
               <Input
-                type="number"
+                // Allow comma input; normalize on submit
+                type="text"
                 placeholder="Cantidad"
                 value={newAmount}
                 onChange={(e) => setNewAmount(e.target.value)}
