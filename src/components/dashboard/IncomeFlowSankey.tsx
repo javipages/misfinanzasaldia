@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ResponsiveContainer, Sankey, Tooltip } from "recharts";
-import type { TooltipProps } from "recharts";
+import { ResponsiveContainer, Sankey } from "recharts";
 import type { MonthlyData } from "@/hooks/use-dashboard-data";
 
 type SankeyNodeDatum = {
@@ -174,58 +173,6 @@ const SankeyCustomNode = ({
         ) : null}
       </text>
     </g>
-  );
-};
-
-const SankeyTooltipContent = ({
-  active,
-  payload,
-}: TooltipProps<number, string>) => {
-  const isMobile = useIsMobile();
-  if (!active || !payload?.length) {
-    return null;
-  }
-
-  const datum = payload[0]?.payload as {
-    source?: { name: string };
-    target?: { name: string };
-    value: number;
-    percentage?: number;
-  };
-
-  if (!datum) {
-    return null;
-  }
-
-  const percentageText = formatPercentage(datum.percentage);
-
-  const srcName = datum.source?.name
-    ? truncateMobileWords(datum.source.name, isMobile)
-    : undefined;
-  const tgtName = datum.target?.name
-    ? truncateMobileWords(datum.target.name, isMobile)
-    : undefined;
-
-  const baseTextSize = isMobile ? "text-[11px]" : "text-xs";
-  return (
-    <div
-      className={`rounded-md border border-border bg-popover px-3 py-2 ${baseTextSize} shadow-sm`}
-    >
-      {srcName && tgtName ? (
-        <div className="mb-1 font-medium text-foreground">
-          {srcName} → {tgtName}
-        </div>
-      ) : null}
-      <div className="text-foreground">
-        {formatCurrency(datum.value)}
-        {percentageText ? (
-          <span className="text-muted-foreground">
-            {" "}
-            {`(${percentageText})`}
-          </span>
-        ) : null}
-      </div>
-    </div>
   );
 };
 
@@ -495,9 +442,7 @@ export const IncomeFlowSankey = ({
                 <SankeyCustomNode {...(props as SankeyCustomNodeProps)} />
               )}
               link={{ strokeOpacity: 0.35 }}
-            >
-              <Tooltip content={<SankeyTooltipContent />} cursor={false} />
-            </Sankey>
+            ></Sankey>
           </ResponsiveContainer>
         ) : (
           <p className="text-sm text-muted-foreground">
