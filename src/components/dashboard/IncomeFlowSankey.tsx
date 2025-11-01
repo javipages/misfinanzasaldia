@@ -12,7 +12,7 @@ import type { MonthlyData } from "@/hooks/use-dashboard-data";
 type SankeyNodeDatum = {
   name: string;
   fill: string;
-  labelPosition: "left" | "center" | "right" | "top";
+  labelPosition: "left" | "center" | "right" | "top" | "bottom";
   amount: number;
   percentage?: number;
   role:
@@ -83,21 +83,21 @@ interface IncomeFlowSankeyProps {
 
 const formatCurrency = (value: number) => {
   if (!Number.isFinite(value)) {
-    return "€0";
+    return "0€";
   }
 
   const abs = Math.abs(value);
   if (abs >= 1000) {
     const compact = value / 1000;
     const digits = abs >= 10000 ? 1 : 2;
-    return `€${compact.toFixed(digits)}K`;
+    return `${compact.toFixed(digits)}K€`;
   }
 
   const num = value.toLocaleString(undefined, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
-  return `€${num}`;
+  return `${num}€`;
 };
 
 const formatPercentage = (value?: number) => {
@@ -123,7 +123,14 @@ const SankeyCustomNode = ({
   payload,
 }: SankeyCustomNodeProps) => {
   const isMobile = useIsMobile();
+
+  // No renderizar nada si el nombre está vacío (nodo fantasma)
+  if (!payload.name) {
+    return null;
+  }
+
   const isTopLabel = payload.labelPosition === "top";
+  const isBottomLabel = payload.labelPosition === "bottom";
   const textAnchor = isTopLabel
     ? "middle"
     : payload.labelPosition === "left"
@@ -146,6 +153,10 @@ const SankeyCustomNode = ({
     // Texto arriba del nodo
     textX = x + width / 2;
     baseY = y - 32;
+  } else if (isBottomLabel) {
+    // Texto abajo del nodo
+    textX = x;
+    baseY = y + height + 16;
   } else {
     // Texto al lado del nodo (comportamiento original)
     textX =
@@ -212,11 +223,14 @@ const SankeyCustomLink = ({
   index,
   payload,
 }: SankeyCustomLinkProps) => {
+  // Si el target no tiene nombre (nodo fantasma), hacer el link transparente
+  const isTargetGhost = !payload.target.name;
+
   const sourceColor = payload.source.fill ?? "#22c55e";
   const targetColor = payload.target.fill ?? sourceColor;
   const gradientId = `sankey-gradient-${sanitizeForId(
     payload.source.name
-  )}-${sanitizeForId(payload.target.name)}-${index}`;
+  )}-${sanitizeForId(payload.target.name || "ghost")}-${index}`;
 
   return (
     <g>
@@ -230,7 +244,11 @@ const SankeyCustomLink = ({
           y2={targetY}
         >
           <stop offset="0%" stopColor={sourceColor} stopOpacity={0.9} />
-          <stop offset="100%" stopColor={targetColor} stopOpacity={0.65} />
+          <stop
+            offset="100%"
+            stopColor={targetColor}
+            stopOpacity={isTargetGhost ? 0 : 0.65}
+          />
         </linearGradient>
       </defs>
       <path
@@ -239,12 +257,11 @@ const SankeyCustomLink = ({
         fill="none"
         strokeWidth={Math.max(linkWidth, 1)}
         stroke={`url(#${gradientId})`}
-        opacity={0.7}
+        opacity={isTargetGhost ? 0 : 0.7}
       />
     </g>
   );
 };
-
 const SankeyTooltipContent = ({
   active,
   payload,
@@ -367,9 +384,7 @@ export const IncomeFlowSankey = ({
         fill: income.color,
         labelPosition: "left",
         amount: income.value,
-        percentage: totalIngresosValue
-          ? income.value / totalIngresosValue
-          : undefined,
+
         role: "income",
       });
       incomeNodeIndices.push(nodes.length - 1);
@@ -377,7 +392,7 @@ export const IncomeFlowSankey = ({
 
     const ingresoTotalIndex = nodes.length;
     nodes.push({
-      name: "Ingreso total",
+      name: "Ingresos",
       fill: "#15803d",
       labelPosition: "top",
       amount: totalIngresosValue,
@@ -393,7 +408,6 @@ export const IncomeFlowSankey = ({
         fill: "#f97316",
         labelPosition: "left",
         amount: deficit,
-        percentage: totalGastosValue ? deficit / totalGastosValue : undefined,
         role: "deficit",
       });
       deficitIndex = nodes.length - 1;
@@ -401,17 +415,14 @@ export const IncomeFlowSankey = ({
 
     const gastoTotalIndex = nodes.length;
     nodes.push({
-      name: "Gasto total",
+      name: "Gastos",
       fill: "#b91c1c",
       labelPosition: "top",
       amount: totalGastosValue,
-      percentage: totalIngresosValue
-        ? totalGastosValue / totalIngresosValue
-        : undefined,
       role: "expense-total",
     });
 
-    // Añadimos los nodos de gastos (para que queden arriba)
+    // Añadimos los nodos de gastos
     const expenseNodeIndices: number[] = [];
     expenseDisplay.forEach((expense) => {
       if (expense.value <= 0) {
@@ -432,18 +443,26 @@ export const IncomeFlowSankey = ({
 
     // Ahorro al final (para que quede abajo)
     let ahorroIndex: number | null = null;
+    let ahorroTargetIndex: number | null = null;
     if (ahorro > 0) {
       nodes.push({
         name: "Ahorro",
         fill: "#2563eb",
-        labelPosition: "right",
+        labelPosition: "bottom",
         amount: ahorro,
-        percentage: totalIngresosValue
-          ? ahorro / totalIngresosValue
-          : undefined,
         role: "savings",
       });
       ahorroIndex = nodes.length - 1;
+
+      // Crear nodo invisible/fantasma para extender el ahorro
+      nodes.push({
+        name: "",
+        fill: "transparent",
+        labelPosition: "right",
+        amount: ahorro,
+        role: "savings",
+      });
+      ahorroTargetIndex = nodes.length - 1;
     }
 
     // Links
@@ -497,11 +516,21 @@ export const IncomeFlowSankey = ({
       });
     });
 
-    if (ahorroIndex !== null) {
+    if (ahorroIndex !== null && ahorroTargetIndex !== null) {
       const node = nodes[ahorroIndex];
+      // Link desde Ingreso total hacia Ahorro
       links.push({
         source: ingresoTotalIndex,
         target: ahorroIndex,
+        value: node.amount,
+        fill: node.fill,
+        stroke: node.fill,
+        percentage: node.percentage,
+      });
+      // Link desde Ahorro hacia nodo fantasma (para extenderlo)
+      links.push({
+        source: ahorroIndex,
+        target: ahorroTargetIndex,
         value: node.amount,
         fill: node.fill,
         stroke: node.fill,
