@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, Sankey, Tooltip } from "recharts";
 import type { TooltipProps } from "recharts";
@@ -61,20 +62,21 @@ interface IncomeFlowSankeyProps {
 
 const formatCurrency = (value: number) => {
   if (!Number.isFinite(value)) {
-    return "€0";
+    return "0€";
   }
 
   const abs = Math.abs(value);
   if (abs >= 1000) {
     const compact = value / 1000;
     const digits = abs >= 10000 ? 1 : 2;
-    return `€${compact.toFixed(digits)}K`;
+    return `${compact.toFixed(digits)}K€`;
   }
 
-  return `€${value.toLocaleString(undefined, {
+  const num = value.toLocaleString(undefined, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  })}`;
+  });
+  return `${num}€`;
 };
 
 const formatPercentage = (value?: number) => {
@@ -84,6 +86,14 @@ const formatPercentage = (value?: number) => {
   return `${(value * 100).toFixed(1)}%`;
 };
 
+const truncateMobileWords = (text: string, isMobile: boolean, maxLen = 10) => {
+  if (!isMobile) return text;
+  return text
+    .split(" ")
+    .map((word) => (word.length > maxLen ? `${word.slice(0, maxLen)}…` : word))
+    .join(" ");
+};
+
 const SankeyCustomNode = ({
   x,
   y,
@@ -91,6 +101,7 @@ const SankeyCustomNode = ({
   height,
   payload,
 }: SankeyCustomNodeProps) => {
+  const isMobile = useIsMobile();
   const isTopLabel = payload.labelPosition === "top";
   const textAnchor = isTopLabel
     ? "middle"
@@ -100,9 +111,10 @@ const SankeyCustomNode = ({
     ? "middle"
     : "start";
 
-  const lineHeight = 18;
+  const lineHeight = isMobile ? 16 : 18;
   const linesCount = 2;
   const percentageText = formatPercentage(payload.percentage);
+  const displayName = truncateMobileWords(payload.name, isMobile);
 
   let textX: number;
   let baseY: number;
@@ -140,17 +152,17 @@ const SankeyCustomNode = ({
         x={textX}
         y={baseY}
         textAnchor={textAnchor}
-        fontSize={13}
+        fontSize={isMobile ? 11 : 13}
         fontWeight={600}
         fill="hsl(var(--foreground))"
       >
-        {payload.name}
+        {displayName}
       </text>
       <text
         x={textX}
         y={baseY + lineHeight}
         textAnchor={textAnchor}
-        fontSize={12}
+        fontSize={isMobile ? 10 : 12}
         fontWeight={500}
         fill="hsl(var(--foreground))"
       >
@@ -167,6 +179,7 @@ const SankeyTooltipContent = ({
   active,
   payload,
 }: TooltipProps<number, string>) => {
+  const isMobile = useIsMobile();
   if (!active || !payload?.length) {
     return null;
   }
@@ -184,11 +197,21 @@ const SankeyTooltipContent = ({
 
   const percentageText = formatPercentage(datum.percentage);
 
+  const srcName = datum.source?.name
+    ? truncateMobileWords(datum.source.name, isMobile)
+    : undefined;
+  const tgtName = datum.target?.name
+    ? truncateMobileWords(datum.target.name, isMobile)
+    : undefined;
+
+  const baseTextSize = isMobile ? "text-[11px]" : "text-xs";
   return (
-    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-sm">
-      {datum.source?.name && datum.target?.name ? (
+    <div
+      className={`rounded-md border border-border bg-popover px-3 py-2 ${baseTextSize} shadow-sm`}
+    >
+      {srcName && tgtName ? (
         <div className="mb-1 font-medium text-foreground">
-          {datum.source.name} → {datum.target.name}
+          {srcName} → {tgtName}
         </div>
       ) : null}
       <div className="text-foreground">
@@ -213,6 +236,7 @@ export const IncomeFlowSankey = ({
   selectedMonth,
   isLoading,
 }: IncomeFlowSankeyProps) => {
+  const isMobile = useIsMobile();
   const sankeyData = useMemo(() => {
     if (isLoading) {
       return null;
@@ -450,7 +474,7 @@ export const IncomeFlowSankey = ({
           financiación adicional.
         </p>
       </CardHeader>
-      <CardContent className="h-[550px]">
+      <CardContent className="h-[550px] px-0 md:px-4">
         {sankeyData ? (
           <ResponsiveContainer width="100%" height="100%">
             <Sankey
@@ -458,8 +482,13 @@ export const IncomeFlowSankey = ({
               nodeWidth={18}
               nodePadding={42}
               iterations={48}
-              margin={{ top: 48, bottom: 24, left: 120, right: 120 }}
+              margin={
+                isMobile
+                  ? { top: 32, bottom: 16, left: 95, right: 95 }
+                  : { top: 48, bottom: 24, left: 120, right: 120 }
+              }
               linkCurvature={0.45}
+              sort={false}
               node={(props) => (
                 <SankeyCustomNode {...(props as SankeyCustomNodeProps)} />
               )}
