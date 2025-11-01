@@ -197,6 +197,7 @@ export function ExportDialog({
             <div className="flex gap-2">
               <Input
                 id="filename"
+                autoFocus
                 placeholder={generateDefaultFilename()}
                 value={filename}
                 onChange={(e) => setFilename(e.target.value)}

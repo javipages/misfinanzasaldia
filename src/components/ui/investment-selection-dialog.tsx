@@ -88,6 +88,7 @@ export function InvestmentSelectionDialog({
             <Input
               id="search"
               placeholder="Buscar por nombre de inversión..."
+              autoFocus
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"

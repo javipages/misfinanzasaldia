@@ -44,6 +44,7 @@ export function ManageEntriesDialog({
   const [newAmount, setNewAmount] = useState<string>("");
   const [newDesc, setNewDesc] = useState<string>("");
   const dialogRef = useRef<HTMLDivElement>(null);
+  const newAmountInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -51,7 +52,7 @@ export function ManageEntriesDialog({
       setNewAmount("");
       setNewDesc("");
       requestAnimationFrame(() => {
-        dialogRef.current?.focus();
+        newAmountInputRef.current?.focus();
       });
     }
   }, [open, entries]);
@@ -224,6 +225,7 @@ export function ManageEntriesDialog({
                 type="text"
                 placeholder="Cantidad"
                 value={newAmount}
+                ref={newAmountInputRef}
                 onChange={(e) => setNewAmount(e.target.value)}
                 required
               />

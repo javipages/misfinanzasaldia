@@ -64,6 +64,7 @@ export function AddValueDialog({
   );
   const [saving, setSaving] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const amountInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -73,7 +74,7 @@ export function AddValueDialog({
       setAmount(defaultAmount != null ? String(defaultAmount) : "");
       setDescription(defaultDescription ?? "");
       requestAnimationFrame(() => {
-        dialogRef.current?.focus();
+        amountInputRef.current?.focus();
       });
     }
   }, [
@@ -216,6 +217,7 @@ export function AddValueDialog({
                 // Keep type text to allow comma input; we normalize on submit
                 type="text"
                 value={amount}
+                ref={amountInputRef}
                 onChange={(e) => setAmount(e.target.value)}
                 required
                 inputMode="decimal"

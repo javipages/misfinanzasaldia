@@ -106,6 +106,7 @@ export function AddYearDialog({
             </Label>
             <Input
               id="year"
+              autoFocus
               type="number"
               min={1900}
               max={3000}

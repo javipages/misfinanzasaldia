@@ -61,6 +61,7 @@ export function AddMovementDialog({
   );
   const [saving, setSaving] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const amountInputRef = useRef<HTMLInputElement>(null);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -71,7 +72,7 @@ export function AddMovementDialog({
       setAmount(defaultAmount != null ? String(defaultAmount) : "");
       setDescription(defaultDescription ?? "");
       requestAnimationFrame(() => {
-        dialogRef.current?.focus();
+        amountInputRef.current?.focus();
       });
     }
   }, [
@@ -218,6 +219,7 @@ export function AddMovementDialog({
               <Input
                 type="number"
                 value={amount}
+                ref={amountInputRef}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="0.00"
                 required

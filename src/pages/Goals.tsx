@@ -419,6 +419,7 @@ const Goals = () => {
                 </Label>
                 <Input
                   id="target_amount"
+                  autoFocus
                   type="number"
                   value={formData.target_amount}
                   onChange={(e) =>

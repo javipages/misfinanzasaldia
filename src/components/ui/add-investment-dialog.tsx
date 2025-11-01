@@ -410,6 +410,7 @@ export function AddInvestmentDialog({
               </Label>
               <Input
                 id="initial_amount"
+                autoFocus
                 type="number"
                 step="0.01"
                 value={formData.initial_amount}

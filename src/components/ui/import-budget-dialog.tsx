@@ -284,6 +284,7 @@ Responde ÚNICAMENTE con el JSON válido, sin explicaciones adicionales.`;
             <Label htmlFor="budget-json">JSON del Presupuesto</Label>
             <Textarea
               id="budget-json"
+              autoFocus
               placeholder={`{
   "year": 2025,
   "incomes": [
