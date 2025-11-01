@@ -119,6 +119,8 @@ const SankeyCustomNode = ({
   let textX: number;
   let baseY: number;
 
+  const textOffset = isMobile ? 2 : 8;
+
   if (isTopLabel) {
     // Texto arriba del nodo
     textX = x + width / 2;
@@ -127,10 +129,10 @@ const SankeyCustomNode = ({
     // Texto al lado del nodo (comportamiento original)
     textX =
       payload.labelPosition === "left"
-        ? x - 16
+        ? x - textOffset
         : payload.labelPosition === "center"
         ? x + width / 2
-        : x + width + 16;
+        : x + width + textOffset;
     baseY = y + height / 2 - ((linesCount - 1) * lineHeight) / 2;
   }
 
@@ -479,12 +481,12 @@ export const IncomeFlowSankey = ({
           <ResponsiveContainer width="100%" height="100%">
             <Sankey
               data={sankeyData}
-              nodeWidth={18}
-              nodePadding={42}
+              nodeWidth={isMobile ? 12 : 18}
+              nodePadding={isMobile ? 50 : 42}
               iterations={48}
               margin={
                 isMobile
-                  ? { top: 32, bottom: 16, left: 95, right: 95 }
+                  ? { top: 32, bottom: 16, left: 80, right: 85 }
                   : { top: 48, bottom: 24, left: 120, right: 120 }
               }
               linkCurvature={0.45}
