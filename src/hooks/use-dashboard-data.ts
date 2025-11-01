@@ -53,13 +53,15 @@ const getMonthLabels = (isMobile: boolean) => [
   isMobile ? "D" : "Dic",
 ];
 
-const CHART_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "hsl(var(--chart-6))",
+const EXPENSE_COLORS = [
+  "#7f1d1d",
+  "#991b1b",
+  "#b91c1c",
+  "#dc2626",
+  "#ef4444",
+  "#f87171",
+  "#fb7185",
+  "#fda4af",
 ];
 
 const INCOME_COLORS = [
@@ -238,7 +240,7 @@ export function useDashboardData(selectedMonth?: number) {
       .map(([name, value], index) => ({
         name,
         value,
-        color: CHART_COLORS[index % CHART_COLORS.length],
+        color: EXPENSE_COLORS[index % EXPENSE_COLORS.length],
       }))
       .sort((a, b) => b.value - a.value);
 

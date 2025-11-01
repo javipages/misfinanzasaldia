@@ -1,7 +1,12 @@
 import { useMemo } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ResponsiveContainer, Sankey } from "recharts";
+import {
+  ResponsiveContainer,
+  Sankey,
+  Tooltip as RechartsTooltip,
+  TooltipProps,
+} from "recharts";
 import type { MonthlyData } from "@/hooks/use-dashboard-data";
 
 type SankeyNodeDatum = {
@@ -37,6 +42,23 @@ type SankeyCustomNodeProps = {
   payload: SankeyNodeDatum;
 };
 
+type SankeyCustomLinkProps = {
+  sourceX: number;
+  sourceY: number;
+  targetX: number;
+  targetY: number;
+  sourceControlX: number;
+  targetControlX: number;
+  linkWidth: number;
+  index: number;
+  payload: {
+    source: SankeyNodeDatum;
+    target: SankeyNodeDatum;
+    value: number;
+    percentage?: number;
+  };
+};
+
 interface IncomeCategory {
   name: string;
   value: number;
@@ -61,21 +83,21 @@ interface IncomeFlowSankeyProps {
 
 const formatCurrency = (value: number) => {
   if (!Number.isFinite(value)) {
-    return "0€";
+    return "€0";
   }
 
   const abs = Math.abs(value);
   if (abs >= 1000) {
     const compact = value / 1000;
     const digits = abs >= 10000 ? 1 : 2;
-    return `${compact.toFixed(digits)}K€`;
+    return `€${compact.toFixed(digits)}K`;
   }
 
   const num = value.toLocaleString(undefined, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
-  return `${num}€`;
+  return `€${num}`;
 };
 
 const formatPercentage = (value?: number) => {
@@ -173,6 +195,94 @@ const SankeyCustomNode = ({
         ) : null}
       </text>
     </g>
+  );
+};
+
+const sanitizeForId = (value: string) =>
+  value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
+const SankeyCustomLink = ({
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourceControlX,
+  targetControlX,
+  linkWidth,
+  index,
+  payload,
+}: SankeyCustomLinkProps) => {
+  const sourceColor = payload.source.fill ?? "#22c55e";
+  const targetColor = payload.target.fill ?? sourceColor;
+  const gradientId = `sankey-gradient-${sanitizeForId(
+    payload.source.name
+  )}-${sanitizeForId(payload.target.name)}-${index}`;
+
+  return (
+    <g>
+      <defs>
+        <linearGradient
+          id={gradientId}
+          gradientUnits="userSpaceOnUse"
+          x1={sourceX}
+          y1={sourceY}
+          x2={targetX}
+          y2={targetY}
+        >
+          <stop offset="0%" stopColor={sourceColor} stopOpacity={0.9} />
+          <stop offset="100%" stopColor={targetColor} stopOpacity={0.65} />
+        </linearGradient>
+      </defs>
+      <path
+        className="recharts-sankey-link"
+        d={`M${sourceX},${sourceY} C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`}
+        fill="none"
+        strokeWidth={Math.max(linkWidth, 1)}
+        stroke={`url(#${gradientId})`}
+        opacity={0.7}
+      />
+    </g>
+  );
+};
+
+const SankeyTooltipContent = ({
+  active,
+  payload,
+}: TooltipProps<number, string>) => {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  const datum = payload[0]?.payload as {
+    source?: { name: string };
+    target?: { name: string };
+    value: number;
+    percentage?: number;
+  };
+
+  if (!datum) {
+    return null;
+  }
+
+  const percentageText = formatPercentage(datum.percentage);
+
+  return (
+    <div className="rounded-md border border-border bg-popover px-3 py-2 text-xs shadow-sm">
+      {datum.source?.name && datum.target?.name ? (
+        <div className="mb-1 font-medium text-foreground">
+          {datum.source.name} → {datum.target.name}
+        </div>
+      ) : null}
+      <div className="text-foreground">
+        {formatCurrency(datum.value)}
+        {percentageText ? (
+          <span className="text-muted-foreground">
+            {" "}
+            {`(${percentageText})`}
+          </span>
+        ) : null}
+      </div>
+    </div>
   );
 };
 
@@ -441,8 +551,15 @@ export const IncomeFlowSankey = ({
               node={(props) => (
                 <SankeyCustomNode {...(props as SankeyCustomNodeProps)} />
               )}
-              link={{ strokeOpacity: 0.35 }}
-            ></Sankey>
+              link={(props) => (
+                <SankeyCustomLink {...(props as SankeyCustomLinkProps)} />
+              )}
+            >
+              <RechartsTooltip
+                cursor={false}
+                content={<SankeyTooltipContent />}
+              />
+            </Sankey>
           </ResponsiveContainer>
         ) : (
           <p className="text-sm text-muted-foreground">
