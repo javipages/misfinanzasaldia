@@ -7,7 +7,7 @@ import type { MonthlyData } from "@/hooks/use-dashboard-data";
 type SankeyNodeDatum = {
   name: string;
   fill: string;
-  labelPosition: "left" | "center" | "right";
+  labelPosition: "left" | "center" | "right" | "top";
   amount: number;
   percentage?: number;
   role:
@@ -91,22 +91,36 @@ const SankeyCustomNode = ({
   height,
   payload,
 }: SankeyCustomNodeProps) => {
-  const textAnchor =
-    payload.labelPosition === "left"
-      ? "end"
-      : payload.labelPosition === "center"
-      ? "middle"
-      : "start";
-  const textX =
-    payload.labelPosition === "left"
-      ? x - 16
-      : payload.labelPosition === "center"
-      ? x + width / 2
-      : x + width + 16;
+  const isTopLabel = payload.labelPosition === "top";
+  const textAnchor = isTopLabel
+    ? "middle"
+    : payload.labelPosition === "left"
+    ? "end"
+    : payload.labelPosition === "center"
+    ? "middle"
+    : "start";
+
   const lineHeight = 18;
   const linesCount = 2;
-  const baseY = y + height / 2 - ((linesCount - 1) * lineHeight) / 2;
   const percentageText = formatPercentage(payload.percentage);
+
+  let textX: number;
+  let baseY: number;
+
+  if (isTopLabel) {
+    // Texto arriba del nodo
+    textX = x + width / 2;
+    baseY = y - 32;
+  } else {
+    // Texto al lado del nodo (comportamiento original)
+    textX =
+      payload.labelPosition === "left"
+        ? x - 16
+        : payload.labelPosition === "center"
+        ? x + width / 2
+        : x + width + 16;
+    baseY = y + height / 2 - ((linesCount - 1) * lineHeight) / 2;
+  }
 
   return (
     <g>
@@ -282,45 +296,19 @@ export const IncomeFlowSankey = ({
     nodes.push({
       name: "Ingreso total",
       fill: "#15803d",
-      labelPosition: "center",
+      labelPosition: "top",
       amount: totalIngresosValue,
       role: "income-total",
     });
 
-    const gastoTotalIndex = nodes.length;
-    nodes.push({
-      name: "Gasto total",
-      fill: "#b91c1c",
-      labelPosition: "center",
-      amount: totalGastosValue,
-      percentage: totalIngresosValue
-        ? totalGastosValue / totalIngresosValue
-        : undefined,
-      role: "expense-total",
-    });
-
-    let ahorroIndex: number | null = null;
-    if (ahorro > 0) {
-      nodes.push({
-        name: "Ahorro",
-        fill: "#2563eb",
-        labelPosition: "right",
-        amount: ahorro,
-        percentage: totalIngresosValue
-          ? ahorro / totalIngresosValue
-          : undefined,
-        role: "savings",
-      });
-      ahorroIndex = nodes.length - 1;
-    }
-
+    // Déficit primero (si existe, irá arriba)
     let deficitIndex: number | null = null;
     if (totalGastosValue > totalIngresosValue) {
       const deficit = totalGastosValue - totalIngresosValue;
       nodes.push({
         name: "Déficit",
         fill: "#f97316",
-        labelPosition: "right",
+        labelPosition: "left",
         amount: deficit,
         percentage: totalGastosValue ? deficit / totalGastosValue : undefined,
         role: "deficit",
@@ -328,6 +316,19 @@ export const IncomeFlowSankey = ({
       deficitIndex = nodes.length - 1;
     }
 
+    const gastoTotalIndex = nodes.length;
+    nodes.push({
+      name: "Gasto total",
+      fill: "#b91c1c",
+      labelPosition: "top",
+      amount: totalGastosValue,
+      percentage: totalIngresosValue
+        ? totalGastosValue / totalIngresosValue
+        : undefined,
+      role: "expense-total",
+    });
+
+    // Añadimos los nodos de gastos (para que queden arriba)
     const expenseNodeIndices: number[] = [];
     expenseDisplay.forEach((expense) => {
       if (expense.value <= 0) {
@@ -346,6 +347,23 @@ export const IncomeFlowSankey = ({
       expenseNodeIndices.push(nodes.length - 1);
     });
 
+    // Ahorro al final (para que quede abajo)
+    let ahorroIndex: number | null = null;
+    if (ahorro > 0) {
+      nodes.push({
+        name: "Ahorro",
+        fill: "#2563eb",
+        labelPosition: "right",
+        amount: ahorro,
+        percentage: totalIngresosValue
+          ? ahorro / totalIngresosValue
+          : undefined,
+        role: "savings",
+      });
+      ahorroIndex = nodes.length - 1;
+    }
+
+    // Links
     incomeNodeIndices.forEach((index) => {
       const node = nodes[index];
       links.push({
@@ -357,6 +375,18 @@ export const IncomeFlowSankey = ({
         percentage: node.percentage,
       });
     });
+
+    if (deficitIndex !== null) {
+      const node = nodes[deficitIndex];
+      links.push({
+        source: deficitIndex,
+        target: gastoTotalIndex,
+        value: node.amount,
+        fill: node.fill,
+        stroke: node.fill,
+        percentage: node.percentage,
+      });
+    }
 
     const gastoFlow = Math.min(totalIngresosValue, totalGastosValue);
     if (gastoFlow > 0) {
@@ -372,30 +402,6 @@ export const IncomeFlowSankey = ({
       });
     }
 
-    if (ahorroIndex !== null) {
-      const node = nodes[ahorroIndex];
-      links.push({
-        source: ingresoTotalIndex,
-        target: ahorroIndex,
-        value: node.amount,
-        fill: node.fill,
-        stroke: node.fill,
-        percentage: node.percentage,
-      });
-    }
-
-    if (deficitIndex !== null) {
-      const node = nodes[deficitIndex];
-      links.push({
-        source: deficitIndex,
-        target: gastoTotalIndex,
-        value: node.amount,
-        fill: node.fill,
-        stroke: node.fill,
-        percentage: node.percentage,
-      });
-    }
-
     expenseNodeIndices.forEach((index) => {
       const node = nodes[index];
       links.push({
@@ -407,6 +413,18 @@ export const IncomeFlowSankey = ({
         percentage: node.percentage,
       });
     });
+
+    if (ahorroIndex !== null) {
+      const node = nodes[ahorroIndex];
+      links.push({
+        source: ingresoTotalIndex,
+        target: ahorroIndex,
+        value: node.amount,
+        fill: node.fill,
+        stroke: node.fill,
+        percentage: node.percentage,
+      });
+    }
 
     if (!links.length) {
       return null;
@@ -432,15 +450,15 @@ export const IncomeFlowSankey = ({
           financiación adicional.
         </p>
       </CardHeader>
-      <CardContent className="h-[680px]">
+      <CardContent className="h-[550px]">
         {sankeyData ? (
           <ResponsiveContainer width="100%" height="100%">
             <Sankey
               data={sankeyData}
               nodeWidth={18}
-              nodePadding={48}
+              nodePadding={42}
               iterations={48}
-              margin={{ top: 24, bottom: 24, left: 48, right: 48 }}
+              margin={{ top: 48, bottom: 24, left: 120, right: 120 }}
               linkCurvature={0.45}
               node={(props) => (
                 <SankeyCustomNode {...(props as SankeyCustomNodeProps)} />
