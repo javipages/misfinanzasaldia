@@ -5,6 +5,7 @@ import {
   listIncomeEntries,
   listExpenseEntries,
   listExpenseCategories,
+  listIncomeCategories,
 } from "@/integrations/supabase/categories";
 import { useAssets } from "@/hooks/use-assets";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -21,6 +22,11 @@ export interface MonthlyData {
 export interface DashboardData {
   monthlyData: MonthlyData[];
   expenseCategories: Array<{
+    name: string;
+    value: number;
+    color: string;
+  }>;
+  incomeCategories: Array<{
     name: string;
     value: number;
     color: string;
@@ -56,6 +62,15 @@ const CHART_COLORS = [
   "hsl(var(--chart-6))",
 ];
 
+const INCOME_COLORS = [
+  "#15803d",
+  "#16a34a",
+  "#22c55e",
+  "#4ade80",
+  "#86efac",
+  "#bbf7d0",
+];
+
 export function useDashboardData(selectedMonth?: number) {
   const year = useUserStore((s) => s.year);
   const isMobile = useIsMobile();
@@ -67,6 +82,11 @@ export function useDashboardData(selectedMonth?: number) {
   const categoriesQuery = useQuery({
     queryKey: ["expense-categories", year],
     queryFn: async () => listExpenseCategories(year),
+  });
+
+  const incomeCategoriesQuery = useQuery({
+    queryKey: ["income-categories", year],
+    queryFn: async () => listIncomeCategories(year),
   });
 
   // Get current year data
@@ -86,11 +106,14 @@ export function useDashboardData(selectedMonth?: number) {
       currentYearQuery.isLoading ||
       assetsLoading ||
       categoriesQuery.isLoading ||
-      categoriesQuery.isFetching
+      categoriesQuery.isFetching ||
+      incomeCategoriesQuery.isLoading ||
+      incomeCategoriesQuery.isFetching
     ) {
       return {
         monthlyData: [],
         expenseCategories: [],
+        incomeCategories: [],
         totalIngresos: 0,
         totalGastos: 0,
         totalAhorro: 0,
@@ -102,9 +125,13 @@ export function useDashboardData(selectedMonth?: number) {
     const incomes = currentYearQuery.data?.incomes || [];
     const expenses = currentYearQuery.data?.expenses || [];
     const categories = categoriesQuery.data || [];
+    const incomeCategories = incomeCategoriesQuery.data || [];
 
     // Create a map of category_id to category name
     const categoryMap = new Map(categories.map((cat) => [cat.id, cat.name]));
+    const incomeCategoryMap = new Map(
+      incomeCategories.map((cat) => [cat.id, cat.name])
+    );
 
     // Calculate monthly totals
     const monthLabels = getMonthLabels(isMobile);
@@ -215,6 +242,28 @@ export function useDashboardData(selectedMonth?: number) {
       }))
       .sort((a, b) => b.value - a.value);
 
+    const incomeTotals: Record<string, number> = {};
+    const incomesToUse =
+      selectedMonth !== undefined
+        ? incomes.filter((income) => income.month === selectedMonth)
+        : incomes;
+
+    incomesToUse.forEach((income) => {
+      const categoryName =
+        incomeCategoryMap.get(income.category_id) ||
+        `Ingreso ${income.category_id.slice(-4)}`;
+      incomeTotals[categoryName] =
+        (incomeTotals[categoryName] || 0) + Number(income.amount);
+    });
+
+    const incomeCategoriesData = Object.entries(incomeTotals)
+      .map(([name, value], index) => ({
+        name,
+        value,
+        color: INCOME_COLORS[index % INCOME_COLORS.length],
+      }))
+      .sort((a, b) => b.value - a.value);
+
     // Calculate totals
     const totalIngresos = incomes.reduce(
       (sum, entry) => sum + Number(entry.amount),
@@ -234,6 +283,7 @@ export function useDashboardData(selectedMonth?: number) {
     return {
       monthlyData: filteredData,
       expenseCategories,
+      incomeCategories: incomeCategoriesData,
       totalIngresos,
       totalGastos,
       totalAhorro,
@@ -250,6 +300,9 @@ export function useDashboardData(selectedMonth?: number) {
     categoriesQuery.data,
     categoriesQuery.isLoading,
     categoriesQuery.isFetching,
+    incomeCategoriesQuery.data,
+    incomeCategoriesQuery.isLoading,
+    incomeCategoriesQuery.isFetching,
     isMobile,
   ]);
 

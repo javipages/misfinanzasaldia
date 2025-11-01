@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { MetricCard } from "@/components/MetricCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -13,36 +12,20 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, Wallet, Target, Filter } from "lucide-react";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  LineChart,
-  Line,
-  ComposedChart,
-} from "recharts";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartConfig,
-} from "@/components/ui/chart";
-import {
   useDashboardData,
   useDashboardMetrics,
 } from "@/hooks/use-dashboard-data";
 import { useUserStore } from "@/store/user";
+import { MonthlyOverviewChart } from "@/components/dashboard/MonthlyOverviewChart";
+import { ExpenseDistributionChart } from "@/components/dashboard/ExpenseDistributionChart";
+import { IncomeFlowSankey } from "@/components/dashboard/IncomeFlowSankey";
+import { PatrimonyEvolutionChart } from "@/components/dashboard/PatrimonyEvolutionChart";
+import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
 
 const Dashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(
     undefined
   );
-  const [showAllCategories, setShowAllCategories] = useState(false);
   const year = useUserStore((s) => s.year);
 
   const data = useDashboardData(selectedMonth);
@@ -63,24 +46,6 @@ const Dashboard = () => {
     { value: 11, label: "Noviembre", shortLabel: "Nov" },
     { value: 12, label: "Diciembre", shortLabel: "Dic" },
   ];
-
-  console.log(data.monthlyData);
-
-  // Chart configurations
-  const chartConfig = {
-    ingresos: {
-      label: "Ingresos",
-      color: "#22c55e", // Verde para ingresos positivos
-    },
-    gastos: {
-      label: "Gastos",
-      color: "#ef4444", // Rojo para gastos negativos
-    },
-    patrimonio: {
-      label: "Patrimonio",
-      color: "#3b82f6", // Azul para patrimonio
-    },
-  } satisfies ChartConfig;
 
   if (data.isLoading) {
     return (
@@ -238,291 +203,43 @@ const Dashboard = () => {
 
       {/* Charts */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-        {/* Monthly Overview with Comparison */}
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle>
-              {selectedMonth
-                ? `Resumen de ${
-                    months.find((m) => m.value === selectedMonth)?.label
-                  }`
-                : `Resumen Mensual ${year}`}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-0 pr-2 md:pr-4">
-            <ChartContainer config={chartConfig}>
-              <ComposedChart
-                data={data.monthlyData}
-                key={`monthly-${selectedMonth ?? "all"}`}
-              >
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      formatter={(value, name) => {
-                        const label =
-                          name === "ingresos"
-                            ? "Ingresos"
-                            : name === "gastos"
-                            ? "Gastos"
-                            : name === "ahorro"
-                            ? "Ahorro"
-                            : name;
-                        return `${label}: ${Number(value).toLocaleString()}€`;
-                      }}
-                    />
-                  }
-                />
-                <Bar
-                  dataKey="ingresos"
-                  fill="var(--color-ingresos)"
-                  name="Ingresos"
-                />
-                <Bar
-                  dataKey="gastos"
-                  fill="var(--color-gastos)"
-                  name="Gastos"
-                />
-              </ComposedChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
+        <MonthlyOverviewChart
+          data={data.monthlyData}
+          selectedMonth={selectedMonth}
+          year={year}
+        />
 
-        {/* Expense Distribution */}
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle>Distribución de Gastos</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {selectedMonth
-                ? `Mes de ${
-                    months.find((m) => m.value === selectedMonth)?.label
-                  }`
-                : `Total del año ${year}`}
-            </p>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={data.expenseCategories}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={120}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {data.expenseCategories.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  formatter={(value) =>
-                    `Gasto: ${Number(value).toLocaleString()}€`
-                  }
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--popover))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    boxShadow:
-                      "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
-                    color: "hsl(var(--foreground))",
-                    fontSize: "14px",
-                    padding: "8px 12px",
-                    zIndex: 1000,
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="grid grid-cols-1 gap-2 mt-4">
-              {(showAllCategories
-                ? data.expenseCategories
-                : data.expenseCategories.slice(0, 5)
-              ).map((category, index) => (
-                <div
-                  key={index}
-                  className="flex flex-wrap items-center justify-between gap-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: category.color }}
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      {category.name}
-                    </span>
-                  </div>
-                  <span className="text-sm font-medium">
-                    {category.value.toLocaleString()}€
-                  </span>
-                </div>
-              ))}
-              {data.expenseCategories.length > 5 && (
-                <div className="text-center pt-2 border-t">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAllCategories(!showAllCategories)}
-                    className="text-xs text-muted-foreground hover:text-foreground"
-                  >
-                    {showAllCategories
-                      ? `Ocultar ${
-                          data.expenseCategories.length - 5
-                        } categorías`
-                      : `Ver +${
-                          data.expenseCategories.length - 5
-                        } categorías más`}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <ExpenseDistributionChart
+          categories={data.expenseCategories}
+          selectedMonth={selectedMonth}
+          year={year}
+        />
 
-        {/* Patrimony Evolution and Financial Summary */}
-
-        {/* Year Comparison */}
+        <IncomeFlowSankey
+          monthlyData={data.monthlyData}
+          incomeCategories={data.incomeCategories}
+          expenseCategories={data.expenseCategories}
+          totalIngresos={metrics.totalIngresos}
+          totalGastos={metrics.totalGastos}
+          selectedMonth={selectedMonth}
+          isLoading={data.isLoading}
+        />
       </div>
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-        <div>
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle>Evolución del Patrimonio</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {selectedMonth
-                  ? `Hasta ${
-                      months.find((m) => m.value === selectedMonth)?.label
-                    }`
-                  : `Evolución mensual ${year}`}
-              </p>
-            </CardHeader>
-            <CardContent className="px-0 pr-3 md:pr-4">
-              <ChartContainer
-                config={{
-                  patrimonio: {
-                    label: "Patrimonio",
-                    color: "hsl(var(--chart-1))",
-                  },
-                }}
-              >
-                <LineChart data={data.monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <ChartTooltip
-                    content={
-                      <ChartTooltipContent
-                        formatter={(value) =>
-                          `Patrimonio: ${Number(value).toLocaleString()}€`
-                        }
-                      />
-                    }
-                  />
-                  {/* Real patrimonio line: connectNulls to skip nulls and avoid 0s */}
-                  <Line
-                    type="monotone"
-                    dataKey="patrimonio"
-                    stroke="var(--color-patrimonio)"
-                    strokeWidth={3}
-                    connectNulls
-                    dot={{
-                      fill: "var(--color-patrimonio)",
-                      strokeWidth: 2,
-                      r: 4,
-                    }}
-                    name="Patrimonio"
-                  />
-                  {/* Prediction dots: not connected, visible with outlined dot */}
-                  <Line
-                    type="monotone"
-                    dataKey="patrimonioPrediccion"
-                    stroke="rgba(59,130,246,0.25)" /* subtle line if any segment appears */
-                    strokeDasharray="3 6"
-                    connectNulls={false}
-                    dot={{
-                      r: 5,
-                      stroke: "var(--color-patrimonio)",
-                      strokeWidth: 2,
-                      fill: "rgba(59,130,246,0.25)",
-                    }}
-                    name="Predicción"
-                  />
-                </LineChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-        </div>
-        <div>
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle>Resumen Financiero</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    Tasa de Ahorro
-                  </span>
-                  <span className="font-medium">
-                    {metrics.totalIngresos > 0
-                      ? (
-                          (metrics.totalAhorro / metrics.totalIngresos) *
-                          100
-                        ).toFixed(1)
-                      : 0}
-                    %
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    Gastos/Ingresos
-                  </span>
-                  <span className="font-medium">
-                    {metrics.totalIngresos > 0
-                      ? (
-                          (metrics.totalGastos / metrics.totalIngresos) *
-                          100
-                        ).toFixed(1)
-                      : 0}
-                    %
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    Mes con más ahorro
-                  </span>
-                  <span className="font-medium">
-                    {data.monthlyData.reduce((max, current, index) => {
-                      const maxAhorro = data.monthlyData[max]?.ahorro || 0;
-                      const currentAhorro = current.ahorro;
-                      return currentAhorro > maxAhorro ? index : max;
-                    }, 0) !== -1
-                      ? data.monthlyData.reduce((max, current, index) => {
-                          const maxAhorro = data.monthlyData[max]?.ahorro || 0;
-                          const currentAhorro = current.ahorro;
-                          return currentAhorro > maxAhorro ? index : max;
-                        }, 0) + 1
-                      : "N/A"}
-                    º mes
-                  </span>
-                </div>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    Promedio mensual
-                  </span>
-                  <span className="font-medium">
-                    {(
-                      metrics.totalIngresos / (selectedMonth ? 1 : 12)
-                    ).toLocaleString()}
-                    €
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <PatrimonyEvolutionChart
+          data={data.monthlyData}
+          selectedMonth={selectedMonth}
+          year={year}
+        />
+
+        <FinancialSummary
+          monthlyData={data.monthlyData}
+          totalIngresos={metrics.totalIngresos}
+          totalGastos={metrics.totalGastos}
+          totalAhorro={metrics.totalAhorro}
+          selectedMonth={selectedMonth}
+        />
       </div>
     </div>
   );
