@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useExchangeRate, convertCurrency } from "@/hooks/use-exchange-rate";
+import { useIBKRHistory } from "@/hooks/use-ibkr-history";
+import { IBKRCharts } from "@/components/IBKRCharts";
 import {
   Select,
   SelectContent,
@@ -61,6 +63,12 @@ const IBKR = () => {
     "USD",
     displayCurrency
   );
+
+  // Load history for charts
+  const { data: history = [], isLoading: historyLoading } = useIBKRHistory(30);
+
+  // Check if user has sync history (only allow manual sync on first time)
+  const hasHistory = history.length > 0;
 
   useEffect(() => {
     loadPositions();
@@ -239,13 +247,19 @@ const IBKR = () => {
 
           <Button
             onClick={handleSync}
-            disabled={syncing || rateLoading}
+            disabled={syncing || rateLoading || hasHistory}
             size="lg"
+            variant={hasHistory ? "secondary" : "default"}
+            title={
+              hasHistory
+                ? "Sincronización automática activa (cron job diario a las 5 AM)"
+                : "Sincronizar manualmente por primera vez"
+            }
           >
             <RefreshCw
               className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`}
             />
-            {syncing ? "Sincronizando..." : "Sincronizar"}
+            {syncing ? "Sincronizando..." : hasHistory ? "Auto-Sync Activo" : "Sincronizar"}
           </Button>
         </div>
       </div>
@@ -256,6 +270,16 @@ const IBKR = () => {
           <AlertCircle className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-blue-900">
             💱 Tipo de cambio: <strong>1 USD = {exchangeRate.toFixed(4)} EUR</strong> (Banco Central Europeo, actualizado cada hora)
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Auto-Sync Info */}
+      {hasHistory && (
+        <Alert className="border-green-200 bg-green-50/50">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-900">
+            🤖 Sincronización automática activa. Tus posiciones se actualizan cada día a las 5 AM mediante un cron job.
           </AlertDescription>
         </Alert>
       )}
@@ -285,12 +309,14 @@ const IBKR = () => {
               <Button variant="outline" asChild>
                 <a href="/settings/ibkr">Configurar IBKR</a>
               </Button>
-              <Button onClick={handleSync} disabled={syncing}>
-                <RefreshCw
-                  className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`}
-                />
-                Sincronizar Ahora
-              </Button>
+              {!hasHistory && (
+                <Button onClick={handleSync} disabled={syncing}>
+                  <RefreshCw
+                    className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`}
+                  />
+                  Sincronizar Ahora
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -388,6 +414,15 @@ const IBKR = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Charts */}
+          {!historyLoading && history.length > 0 && (
+            <IBKRCharts
+              history={history}
+              exchangeRate={exchangeRate}
+              displayCurrency={displayCurrency}
+            />
+          )}
 
           {/* Positions Table */}
           <Card className="shadow-card">

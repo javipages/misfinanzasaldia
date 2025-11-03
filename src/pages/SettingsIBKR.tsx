@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle2, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { CheckCircle2, Loader2, AlertCircle, RefreshCw, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/useAuth";
+import { useIBKRHistory } from "@/hooks/use-ibkr-history";
 
 const SettingsIBKR = () => {
   const { session } = useAuth();
@@ -17,6 +18,10 @@ const SettingsIBKR = () => {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [hasConfig, setHasConfig] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+
+  // Check if user has sync history (only allow manual sync on first time)
+  const { data: syncHistory = [] } = useIBKRHistory(1);
+  const hasHistory = syncHistory.length > 0;
 
   useEffect(() => {
     loadConfig();
@@ -205,27 +210,42 @@ const SettingsIBKR = () => {
           <CardContent className="space-y-4">
             <Button
               onClick={syncNow}
-              disabled={syncing}
+              disabled={syncing || hasHistory}
               className="w-full"
               size="lg"
+              variant={hasHistory ? "secondary" : "default"}
             >
               {syncing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Sincronizando con IBKR...
                 </>
+              ) : hasHistory ? (
+                <>
+                  <Clock className="mr-2 h-4 w-4" />
+                  Sincronización Automática Activa
+                </>
               ) : (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Sincronizar Ahora
+                  Sincronizar Ahora (Primera Vez)
                 </>
               )}
             </Button>
 
-            <p className="text-sm text-muted-foreground">
-              Esto traerá tus posiciones actuales desde IBKR y actualizará tus
-              inversiones.
-            </p>
+            {hasHistory ? (
+              <Alert className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+                <Clock className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-900 dark:text-blue-100">
+                  🤖 Tus posiciones se sincronizan automáticamente cada día a las 5 AM mediante un cron job.
+                  Puedes ver el historial de sincronizaciones en la página de IBKR.
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Esto traerá tus posiciones actuales desde IBKR y activará la sincronización automática diaria.
+              </p>
+            )}
           </CardContent>
         </Card>
       )}
@@ -243,18 +263,15 @@ const SettingsIBKR = () => {
       )}
 
       {/* Next Steps */}
-      {hasConfig && (
+      {hasConfig && !hasHistory && (
         <Card className="bg-muted/50">
           <CardHeader>
             <CardTitle className="text-base">✨ Próximos pasos</CardTitle>
           </CardHeader>
           <CardContent className="text-sm space-y-2">
-            <p>1. Haz clic en "Sincronizar Ahora" para traer tus posiciones</p>
-            <p>2. Ve a la página de Inversiones para ver tus datos</p>
-            <p>
-              3. Usa el botón de sincronizar en Inversiones para refrescar cuando
-              quieras
-            </p>
+            <p>1. Haz clic en "Sincronizar Ahora" para traer tus posiciones por primera vez</p>
+            <p>2. Ve a la página de IBKR para ver tus datos y gráficos</p>
+            <p>3. A partir de ahí, tus posiciones se actualizarán automáticamente cada día a las 5 AM</p>
           </CardContent>
         </Card>
       )}

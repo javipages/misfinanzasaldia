@@ -117,6 +117,33 @@ export type Database = {
           },
         ]
       }
+      benchmark_history: {
+        Row: {
+          benchmark_name: string
+          change_percent: number | null
+          close_value: number
+          created_at: string
+          date: string
+          id: string
+        }
+        Insert: {
+          benchmark_name: string
+          change_percent?: number | null
+          close_value: number
+          created_at?: string
+          date: string
+          id?: string
+        }
+        Update: {
+          benchmark_name?: string
+          change_percent?: number | null
+          close_value?: number
+          created_at?: string
+          date?: string
+          id?: string
+        }
+        Relationships: []
+      }
       expense_categories: {
         Row: {
           created_at: string
@@ -431,6 +458,45 @@ export type Database = {
           unrealized_pnl?: number | null
           unrealized_pnl_percent?: number | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ibkr_sync_history: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          positions_count: number
+          status: string
+          sync_date: string
+          total_cost_usd: number
+          total_pnl_usd: number
+          total_value_usd: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          positions_count?: number
+          status?: string
+          sync_date?: string
+          total_cost_usd?: number
+          total_pnl_usd?: number
+          total_value_usd?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          positions_count?: number
+          status?: string
+          sync_date?: string
+          total_cost_usd?: number
+          total_pnl_usd?: number
+          total_value_usd?: number
           user_id?: string
         }
         Relationships: []

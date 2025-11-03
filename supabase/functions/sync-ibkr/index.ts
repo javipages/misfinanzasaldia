@@ -12,6 +12,9 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  let userId: string | null = null
+  let supabase: any = null
+
   try {
     // Auth
     const authHeader = req.headers.get('Authorization')
@@ -19,14 +22,33 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey, {
+    supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     })
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
+    userId = user.id
+
     console.log(`🔄 Syncing IBKR for user: ${user.id}`)
+
+    // Check if this is the first sync (manual sync only allowed on first time)
+    const { data: syncHistory } = await supabase
+      .from('ibkr_sync_history')
+      .select('id')
+      .eq('user_id', user.id)
+      .limit(1)
+
+    if (syncHistory && syncHistory.length > 0) {
+      throw new Error(
+        '🤖 La sincronización manual solo está disponible la primera vez. ' +
+        'Tus posiciones se actualizan automáticamente cada día a las 5 AM vía cron job. ' +
+        'Puedes ver el historial de sincronizaciones en los gráficos de evolución.'
+      )
+    }
+
+    console.log('✅ Primera sincronización detectada, procediendo...')
 
     // Get IBKR config
     const { data: config, error: configError } = await supabase
@@ -108,13 +130,31 @@ serve(async (req) => {
       }
     }
 
+    // Calculate totals for history
+    const totalValueUSD = positions.reduce((sum, pos) => sum + pos.positionValue, 0)
+    const totalCostUSD = positions.reduce((sum, pos) => sum + (pos.quantity * pos.costBasis), 0)
+    const totalPnlUSD = positions.reduce((sum, pos) => sum + pos.unrealizedPnl, 0)
+
     // Update last sync time in config
     await supabase
       .from('ibkr_config')
       .update({ last_sync_at: new Date().toISOString() })
       .eq('user_id', user.id)
 
+    // Save sync history
+    await supabase
+      .from('ibkr_sync_history')
+      .insert({
+        user_id: user.id,
+        positions_count: positions.length,
+        total_value_usd: totalValueUSD,
+        total_cost_usd: totalCostUSD,
+        total_pnl_usd: totalPnlUSD,
+        status: 'success',
+      })
+
     console.log(`✅ Done: ${created} created, ${updated} updated`)
+    console.log(`📊 History saved: $${totalValueUSD.toFixed(2)} value, ${positions.length} positions`)
 
     return new Response(
       JSON.stringify({
@@ -127,6 +167,26 @@ serve(async (req) => {
     )
   } catch (error) {
     console.error('❌ Error:', error)
+
+    // Save error in history if we have userId
+    if (userId && supabase) {
+      try {
+        await supabase
+          .from('ibkr_sync_history')
+          .insert({
+            user_id: userId,
+            positions_count: 0,
+            total_value_usd: 0,
+            total_cost_usd: 0,
+            total_pnl_usd: 0,
+            status: 'error',
+            error_message: error instanceof Error ? error.message : 'Unknown error',
+          })
+      } catch (historyError) {
+        console.error('Failed to save error history:', historyError)
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: false,
