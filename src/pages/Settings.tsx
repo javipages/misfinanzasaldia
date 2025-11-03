@@ -1,8 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Tags, Wallet, LineChart } from "lucide-react";
 import { NavigationCard } from "@/components/NavigationCard";
-import { Tags, Wallet } from "lucide-react";
 
 function SettingsHome() {
   const navigationCards = [
@@ -23,6 +22,15 @@ function SettingsHome() {
       href: "/settings/assets",
       color: "text-green-600",
       bgColor: "bg-green-50 dark:bg-green-950",
+    },
+    {
+      title: "Interactive Brokers (IBKR)",
+      description:
+        "Conecta tu cuenta de IBKR para sincronizar automáticamente tus posiciones",
+      icon: LineChart,
+      href: "/settings/ibkr",
+      color: "text-purple-600",
+      bgColor: "bg-purple-50 dark:bg-purple-950",
     },
   ];
 
@@ -66,6 +74,9 @@ function SettingsHome() {
           <li>
             • Los activos patrimoniales te ayudan a hacer seguimiento de tu
             patrimonio neto
+          </li>
+          <li>
+            • Conecta IBKR para ver tus posiciones actualizadas automáticamente con tipo de cambio en tiempo real
           </li>
           <li>
             • Puedes personalizar las categorías según tus necesidades

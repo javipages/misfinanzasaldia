@@ -12,8 +12,17 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
+  DollarSign,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useExchangeRate, convertCurrency } from "@/hooks/use-exchange-rate";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface IBKRPosition {
   id: string;
@@ -37,10 +46,21 @@ const IBKR = () => {
   const [positions, setPositions] = useState<IBKRPosition[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(
-    null
-  );
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [displayCurrency, setDisplayCurrency] = useState<"USD" | "EUR">(
+    () =>
+      (localStorage.getItem("ibkr_display_currency") as "USD" | "EUR") || "EUR"
+  );
+
+  // Get exchange rate (USD to selected currency)
+  const { rate: exchangeRate, loading: rateLoading } = useExchangeRate(
+    "USD",
+    displayCurrency
+  );
 
   useEffect(() => {
     loadPositions();
@@ -66,7 +86,10 @@ const IBKR = () => {
 
   const loadConfig = async () => {
     try {
-      const { data } = await supabase.from("ibkr_config").select("last_sync_at").single();
+      const { data } = await supabase
+        .from("ibkr_config")
+        .select("last_sync_at")
+        .single();
 
       if (data) {
         setLastSync(data.last_sync_at);
@@ -105,12 +128,20 @@ const IBKR = () => {
     }
   };
 
-  const formatCurrency = (amount: number, currency = "USD") => {
+  const handleCurrencyChange = (currency: "USD" | "EUR") => {
+    setDisplayCurrency(currency);
+    localStorage.setItem("ibkr_display_currency", currency);
+  };
+
+  const formatCurrency = (amount: number) => {
+    // Convert from USD to display currency
+    const convertedAmount = convertCurrency(amount, exchangeRate);
+
     return new Intl.NumberFormat("es-ES", {
       style: "currency",
-      currency: currency === "USD" ? "USD" : "EUR",
+      currency: displayCurrency,
       minimumFractionDigits: 2,
-    }).format(amount);
+    }).format(convertedAmount);
   };
 
   const formatNumber = (num: number, decimals = 2) => {
@@ -120,11 +151,26 @@ const IBKR = () => {
     });
   };
 
-  // Calculate totals
-  const totalValue = positions.reduce((sum, pos) => sum + pos.position_value, 0);
-  const totalPnl = positions.reduce((sum, pos) => sum + pos.unrealized_pnl, 0);
-  const totalCost = positions.reduce((sum, pos) => sum + pos.quantity * pos.cost_basis, 0);
-  const totalPnlPercent = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+  // Calculate totals (in USD, will be converted when displaying)
+  const totalValueUSD = positions.reduce(
+    (sum, pos) => sum + pos.position_value,
+    0
+  );
+  const totalPnlUSD = positions.reduce(
+    (sum, pos) => sum + pos.unrealized_pnl,
+    0
+  );
+  const totalCostUSD = positions.reduce(
+    (sum, pos) => sum + pos.quantity * pos.cost_basis,
+    0
+  );
+  const totalPnlPercent =
+    totalCostUSD > 0 ? (totalPnlUSD / totalCostUSD) * 100 : 0;
+
+  // Convert to display currency
+  const totalValue = convertCurrency(totalValueUSD, exchangeRate);
+  const totalPnl = convertCurrency(totalPnlUSD, exchangeRate);
+  const totalCost = convertCurrency(totalCostUSD, exchangeRate);
 
   if (loading) {
     return (
@@ -139,18 +185,80 @@ const IBKR = () => {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold text-foreground">Posiciones IBKR</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-foreground">
+              Posiciones IBKR
+            </h1>
+            {positions.length > 0 && (
+              <Badge variant="secondary" className="text-base px-3 py-1">
+                {positions.length}
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
             {lastSync
-              ? `Última sincronización: ${new Date(lastSync).toLocaleString("es-ES")}`
+              ? `Última sincronización: ${new Date(lastSync).toLocaleString(
+                  "es-ES"
+                )}`
               : "No sincronizado"}
           </p>
         </div>
-        <Button onClick={handleSync} disabled={syncing} size="lg">
-          <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Sincronizando..." : "Sincronizar"}
-        </Button>
+        <div className="flex gap-2 items-center">
+          {/* Currency Selector */}
+          <Select value={displayCurrency} onValueChange={handleCurrencyChange}>
+            <SelectTrigger className="w-[120px]">
+              <SelectValue>
+                {displayCurrency === "USD" ? (
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="h-4 w-4" />
+                    USD
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <Euro className="h-4 w-4" />
+                    EUR
+                  </div>
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="USD">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  USD
+                </div>
+              </SelectItem>
+              <SelectItem value="EUR">
+                <div className="flex items-center gap-2">
+                  <Euro className="h-4 w-4" />
+                  EUR
+                </div>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            onClick={handleSync}
+            disabled={syncing || rateLoading}
+            size="lg"
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`}
+            />
+            {syncing ? "Sincronizando..." : "Sincronizar"}
+          </Button>
+        </div>
       </div>
+
+      {/* Exchange Rate Info */}
+      {displayCurrency === "EUR" && exchangeRate && !rateLoading && (
+        <Alert className="border-blue-200 bg-blue-50/50">
+          <AlertCircle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-900">
+            💱 Tipo de cambio: <strong>1 USD = {exchangeRate.toFixed(4)} EUR</strong> (Banco Central Europeo, actualizado cada hora)
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Message */}
       {message && (
@@ -178,7 +286,9 @@ const IBKR = () => {
                 <a href="/settings/ibkr">Configurar IBKR</a>
               </Button>
               <Button onClick={handleSync} disabled={syncing}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`}
+                />
                 Sincronizar Ahora
               </Button>
             </div>
@@ -197,9 +307,15 @@ const IBKR = () => {
                     <div className="text-2xl font-bold text-foreground">
                       {formatCurrency(totalValue)}
                     </div>
-                    <div className="text-sm text-muted-foreground">Valor Total</div>
+                    <div className="text-sm text-muted-foreground">
+                      Valor Total
+                    </div>
                   </div>
-                  <Euro className="h-8 w-8 text-muted-foreground" />
+                  {displayCurrency === "USD" ? (
+                    <DollarSign className="h-8 w-8 text-muted-foreground" />
+                  ) : (
+                    <Euro className="h-8 w-8 text-muted-foreground" />
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -211,9 +327,15 @@ const IBKR = () => {
                     <div className="text-2xl font-bold text-foreground">
                       {formatCurrency(totalCost)}
                     </div>
-                    <div className="text-sm text-muted-foreground">Costo Total</div>
+                    <div className="text-sm text-muted-foreground">
+                      Coste Total
+                    </div>
                   </div>
-                  <Euro className="h-8 w-8 text-muted-foreground" />
+                  {displayCurrency === "USD" ? (
+                    <DollarSign className="h-8 w-8 text-muted-foreground" />
+                  ) : (
+                    <Euro className="h-8 w-8 text-muted-foreground" />
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -230,7 +352,9 @@ const IBKR = () => {
                       {totalPnl >= 0 ? "+" : ""}
                       {formatCurrency(totalPnl)}
                     </div>
-                    <div className="text-sm text-muted-foreground">P&L Total</div>
+                    <div className="text-sm text-muted-foreground">
+                      P&L Total
+                    </div>
                   </div>
                   {totalPnl >= 0 ? (
                     <TrendingUp className="h-8 w-8 text-success" />
@@ -247,13 +371,17 @@ const IBKR = () => {
                   <div>
                     <div
                       className={`text-2xl font-bold ${
-                        totalPnlPercent >= 0 ? "text-success" : "text-destructive"
+                        totalPnlPercent >= 0
+                          ? "text-success"
+                          : "text-destructive"
                       }`}
                     >
                       {totalPnlPercent >= 0 ? "+" : ""}
                       {formatNumber(totalPnlPercent, 1)}%
                     </div>
-                    <div className="text-sm text-muted-foreground">Rentabilidad</div>
+                    <div className="text-sm text-muted-foreground">
+                      Rentabilidad
+                    </div>
                   </div>
                   <Percent className="h-8 w-8 text-muted-foreground" />
                 </div>
@@ -272,10 +400,14 @@ const IBKR = () => {
                   <thead>
                     <tr className="border-b border-border">
                       <th className="text-left p-3 font-semibold">Símbolo</th>
-                      <th className="text-left p-3 font-semibold">Descripción</th>
-                      <th className="text-center p-3 font-semibold">Cantidad</th>
+                      <th className="text-left p-3 font-semibold">
+                        Descripción
+                      </th>
+                      <th className="text-center p-3 font-semibold">
+                        Cantidad
+                      </th>
                       <th className="text-right p-3 font-semibold">Precio</th>
-                      <th className="text-right p-3 font-semibold">Costo</th>
+                      <th className="text-right p-3 font-semibold">Coste</th>
                       <th className="text-right p-3 font-semibold">Valor</th>
                       <th className="text-right p-3 font-semibold">P&L</th>
                       <th className="text-right p-3 font-semibold">%</th>
@@ -283,10 +415,17 @@ const IBKR = () => {
                   </thead>
                   <tbody>
                     {positions.map((pos) => (
-                      <tr key={pos.id} className="border-b border-border/50 hover:bg-muted/30">
+                      <tr
+                        key={pos.id}
+                        className="border-b border-border/50 hover:bg-muted/30"
+                      >
                         <td className="p-3">
-                          <div className="font-mono font-bold">{pos.symbol}</div>
-                          <div className="text-xs text-muted-foreground">{pos.exchange}</div>
+                          <div className="font-mono font-bold">
+                            {pos.symbol}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {pos.exchange}
+                          </div>
                         </td>
                         <td className="p-3">
                           <div className="font-medium">{pos.description}</div>
@@ -300,22 +439,24 @@ const IBKR = () => {
                           {formatNumber(pos.quantity, 4)}
                         </td>
                         <td className="p-3 text-right font-mono">
-                          {formatCurrency(pos.current_price, pos.currency)}
+                          {formatCurrency(pos.current_price)}
                         </td>
                         <td className="p-3 text-right font-mono">
-                          {formatCurrency(pos.cost_basis, pos.currency)}
+                          {formatCurrency(pos.cost_basis)}
                         </td>
                         <td className="p-3 text-right font-mono font-bold">
-                          {formatCurrency(pos.position_value, pos.currency)}
+                          {formatCurrency(pos.position_value)}
                         </td>
                         <td className="p-3 text-right">
                           <div
                             className={`font-mono font-bold ${
-                              pos.unrealized_pnl >= 0 ? "text-success" : "text-destructive"
+                              pos.unrealized_pnl >= 0
+                                ? "text-success"
+                                : "text-destructive"
                             }`}
                           >
                             {pos.unrealized_pnl >= 0 ? "+" : ""}
-                            {formatCurrency(pos.unrealized_pnl, pos.currency)}
+                            {formatCurrency(pos.unrealized_pnl)}
                           </div>
                         </td>
                         <td className="p-3 text-right">

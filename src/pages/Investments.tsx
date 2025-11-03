@@ -13,9 +13,18 @@ import {
   Euro,
   Percent,
   ExternalLink,
+  DollarSign,
 } from "lucide-react";
 import { useInvestments, type InvestmentItem } from "@/hooks/use-investments";
 import { supabase } from "@/integrations/supabase/client";
+import { useExchangeRate, convertCurrency } from "@/hooks/use-exchange-rate";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AddInvestmentDialog } from "@/components/ui/add-investment-dialog";
 import { InvestmentSelectionDialog } from "@/components/ui/investment-selection-dialog";
 import {
@@ -76,6 +85,13 @@ const Investments = () => {
   >(undefined);
   const [ibkrPositions, setIbkrPositions] = useState<IBKRPosition[]>([]);
   const [loadingIbkr, setLoadingIbkr] = useState(true);
+  const [displayCurrency, setDisplayCurrency] = useState<"USD" | "EUR">(
+    () =>
+      (localStorage.getItem("ibkr_display_currency") as "USD" | "EUR") || "EUR"
+  );
+
+  // Get exchange rate for IBKR positions (USD to selected currency)
+  const { rate: exchangeRate } = useExchangeRate("USD", displayCurrency);
 
   const {
     investments,
@@ -290,6 +306,22 @@ const Investments = () => {
     return `${percentage >= 0 ? "+" : ""}${percentage.toFixed(1)}%`;
   };
 
+  const handleCurrencyChange = (currency: "USD" | "EUR") => {
+    setDisplayCurrency(currency);
+    localStorage.setItem("ibkr_display_currency", currency);
+  };
+
+  const formatCurrencyIBKR = (amount: number) => {
+    // Convert from USD to display currency
+    const convertedAmount = convertCurrency(amount, exchangeRate);
+
+    return new Intl.NumberFormat("es-ES", {
+      style: "currency",
+      currency: displayCurrency,
+      minimumFractionDigits: 2,
+    }).format(convertedAmount);
+  };
+
   // Prepare existing investments data for the dialog
   const existingInvestmentsData = investments
     .filter((investment) => investment.total_invested_amount > 0) // Only show investments that have contributions
@@ -310,15 +342,19 @@ const Investments = () => {
     0
   );
 
-  // Calculate IBKR totals
-  const ibkrInvested = ibkrPositions.reduce(
+  // Calculate IBKR totals (convert from USD to display currency)
+  const ibkrInvestedUSD = ibkrPositions.reduce(
     (sum, pos) => sum + pos.quantity * pos.cost_basis,
     0
   );
-  const ibkrCurrentValue = ibkrPositions.reduce(
+  const ibkrCurrentValueUSD = ibkrPositions.reduce(
     (sum, pos) => sum + pos.position_value,
     0
   );
+
+  // Convert to display currency
+  const ibkrInvested = convertCurrency(ibkrInvestedUSD, exchangeRate);
+  const ibkrCurrentValue = convertCurrency(ibkrCurrentValueUSD, exchangeRate);
 
   // Combined totals
   const totalInvested = manualInvested + ibkrInvested;
@@ -631,12 +667,50 @@ const Investments = () => {
                 </Badge>
                 Posiciones Interactive Brokers
               </CardTitle>
-              <Button variant="ghost" size="sm" asChild>
-                <a href="/ibkr" className="flex items-center gap-1">
-                  Ver detalles
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </Button>
+              <div className="flex gap-2 items-center">
+                {/* Currency Selector */}
+                <Select
+                  value={displayCurrency}
+                  onValueChange={handleCurrencyChange}
+                >
+                  <SelectTrigger className="w-[110px] h-9">
+                    <SelectValue>
+                      {displayCurrency === "USD" ? (
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="h-3 w-3" />
+                          <span className="text-sm">USD</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <Euro className="h-3 w-3" />
+                          <span className="text-sm">EUR</span>
+                        </div>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="USD">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        USD
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="EUR">
+                      <div className="flex items-center gap-2">
+                        <Euro className="h-4 w-4" />
+                        EUR
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Button variant="ghost" size="sm" asChild>
+                  <a href="/ibkr" className="flex items-center gap-1">
+                    Ver detalles
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -657,7 +731,7 @@ const Investments = () => {
                       Precio Actual
                     </th>
                     <th className="text-center p-3 font-semibold text-foreground">
-                      Costo Base
+                      Coste Base
                     </th>
                     <th className="text-center p-3 font-semibold text-foreground">
                       Valor Total
@@ -703,13 +777,13 @@ const Investments = () => {
                           })}
                         </td>
                         <td className="p-3 text-center font-mono text-foreground">
-                          {formatCurrency(pos.current_price)}
+                          {formatCurrencyIBKR(pos.current_price)}
                         </td>
                         <td className="p-3 text-center font-mono text-foreground">
-                          {formatCurrency(pos.cost_basis)}
+                          {formatCurrencyIBKR(pos.cost_basis)}
                         </td>
                         <td className="p-3 text-center font-mono font-bold text-foreground">
-                          {formatCurrency(pos.position_value)}
+                          {formatCurrencyIBKR(pos.position_value)}
                         </td>
                         <td className="p-3 text-center">
                           <div
@@ -718,7 +792,7 @@ const Investments = () => {
                             }`}
                           >
                             {isProfit ? "+" : ""}
-                            {formatCurrency(pos.unrealized_pnl)}
+                            {formatCurrencyIBKR(pos.unrealized_pnl)}
                           </div>
                         </td>
                         <td className="p-3 text-center">
@@ -736,10 +810,10 @@ const Investments = () => {
                   {/* Total row for IBKR */}
                   <tr className="border-t-2 border-blue-300 font-semibold bg-blue-50/50">
                     <td className="p-3 text-foreground" colSpan={5}>
-                      Total IBKR
+                      Total IBKR {displayCurrency === "USD" ? "(USD)" : "(EUR)"}
                     </td>
                     <td className="p-3 text-center font-bold text-foreground">
-                      {formatCurrency(ibkrCurrentValue)}
+                      {formatCurrencyIBKR(ibkrCurrentValueUSD)}
                     </td>
                     <td className="p-3 text-center">
                       <div
@@ -750,7 +824,7 @@ const Investments = () => {
                         }`}
                       >
                         {ibkrCurrentValue - ibkrInvested >= 0 ? "+" : ""}
-                        {formatCurrency(ibkrCurrentValue - ibkrInvested)}
+                        {formatCurrencyIBKR(ibkrCurrentValueUSD - ibkrInvestedUSD)}
                       </div>
                     </td>
                     <td className="p-3 text-center">
