@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,10 @@ import {
   Calendar,
   Euro,
   Percent,
+  ExternalLink,
 } from "lucide-react";
 import { useInvestments, type InvestmentItem } from "@/hooks/use-investments";
+import { supabase } from "@/integrations/supabase/client";
 import { AddInvestmentDialog } from "@/components/ui/add-investment-dialog";
 import { InvestmentSelectionDialog } from "@/components/ui/investment-selection-dialog";
 import {
@@ -48,12 +50,32 @@ import {
 } from "@/components/PageSkeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 
+interface IBKRPosition {
+  id: string;
+  symbol: string;
+  description: string;
+  conid: string;
+  isin: string | null;
+  quantity: number;
+  current_price: number;
+  cost_basis: number;
+  position_value: number;
+  unrealized_pnl: number;
+  unrealized_pnl_percent: number;
+  asset_category: string;
+  currency: string;
+  exchange: string;
+  last_sync_at: string;
+}
+
 const Investments = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectionDialogOpen, setSelectionDialogOpen] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<
     InvestmentItem | undefined
   >(undefined);
+  const [ibkrPositions, setIbkrPositions] = useState<IBKRPosition[]>([]);
+  const [loadingIbkr, setLoadingIbkr] = useState(true);
 
   const {
     investments,
@@ -66,6 +88,27 @@ const Investments = () => {
     addInvestmentValue,
     isLoading,
   } = useInvestments();
+
+  // Load IBKR positions
+  useEffect(() => {
+    const loadIBKRPositions = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("ibkr_positions")
+          .select("*")
+          .order("symbol", { ascending: true });
+
+        if (error) throw error;
+        setIbkrPositions(data as IBKRPosition[]);
+      } catch (error) {
+        console.error("Error loading IBKR positions:", error);
+      } finally {
+        setLoadingIbkr(false);
+      }
+    };
+
+    loadIBKRPositions();
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -258,14 +301,28 @@ const Investments = () => {
     }));
 
   // Calculate totals using current investment amounts
-  const totalInvested = investments.reduce(
+  const manualInvested = investments.reduce(
     (sum, inv) => sum + inv.total_invested_amount,
     0
   );
-  const totalCurrentValue = investments.reduce(
+  const manualCurrentValue = investments.reduce(
     (sum, inv) => sum + inv.current_account_value,
     0
   );
+
+  // Calculate IBKR totals
+  const ibkrInvested = ibkrPositions.reduce(
+    (sum, pos) => sum + pos.quantity * pos.cost_basis,
+    0
+  );
+  const ibkrCurrentValue = ibkrPositions.reduce(
+    (sum, pos) => sum + pos.position_value,
+    0
+  );
+
+  // Combined totals
+  const totalInvested = manualInvested + ibkrInvested;
+  const totalCurrentValue = manualCurrentValue + ibkrCurrentValue;
   const totalProfitLoss = totalCurrentValue - totalInvested;
   const totalProfitLossPercentage =
     totalInvested > 0 ? (totalProfitLoss / totalInvested) * 100 : 0;
@@ -559,6 +616,167 @@ const Investments = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* IBKR Positions Table */}
+      {!loadingIbkr && ibkrPositions.length > 0 && (
+        <Card className="shadow-card border-2 border-blue-200">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="bg-blue-50 text-blue-700 border-blue-300"
+                >
+                  IBKR
+                </Badge>
+                Posiciones Interactive Brokers
+              </CardTitle>
+              <Button variant="ghost" size="sm" asChild>
+                <a href="/ibkr" className="flex items-center gap-1">
+                  Ver detalles
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-3 font-semibold text-foreground">
+                      Símbolo
+                    </th>
+                    <th className="text-left p-3 font-semibold text-foreground">
+                      Descripción
+                    </th>
+                    <th className="text-center p-3 font-semibold text-foreground">
+                      Cantidad
+                    </th>
+                    <th className="text-center p-3 font-semibold text-foreground">
+                      Precio Actual
+                    </th>
+                    <th className="text-center p-3 font-semibold text-foreground">
+                      Costo Base
+                    </th>
+                    <th className="text-center p-3 font-semibold text-foreground">
+                      Valor Total
+                    </th>
+                    <th className="text-center p-3 font-semibold text-foreground">
+                      G/P
+                    </th>
+                    <th className="text-center p-3 font-semibold text-foreground">
+                      Rentabilidad
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ibkrPositions.map((pos) => {
+                    const isProfit = pos.unrealized_pnl >= 0;
+                    return (
+                      <tr
+                        key={pos.id}
+                        className="border-b border-border/50 hover:bg-muted/30"
+                      >
+                        <td className="p-3">
+                          <div className="font-mono font-bold text-foreground">
+                            {pos.symbol}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {pos.exchange}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="font-medium text-foreground">
+                            {pos.description}
+                          </div>
+                          {pos.isin && (
+                            <div className="text-xs text-muted-foreground font-mono">
+                              {pos.isin}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-3 text-center font-mono text-foreground">
+                          {pos.quantity.toLocaleString("es-ES", {
+                            minimumFractionDigits: 4,
+                            maximumFractionDigits: 4,
+                          })}
+                        </td>
+                        <td className="p-3 text-center font-mono text-foreground">
+                          {formatCurrency(pos.current_price)}
+                        </td>
+                        <td className="p-3 text-center font-mono text-foreground">
+                          {formatCurrency(pos.cost_basis)}
+                        </td>
+                        <td className="p-3 text-center font-mono font-bold text-foreground">
+                          {formatCurrency(pos.position_value)}
+                        </td>
+                        <td className="p-3 text-center">
+                          <div
+                            className={`font-bold ${
+                              isProfit ? "text-success" : "text-destructive"
+                            }`}
+                          >
+                            {isProfit ? "+" : ""}
+                            {formatCurrency(pos.unrealized_pnl)}
+                          </div>
+                        </td>
+                        <td className="p-3 text-center">
+                          <div
+                            className={`font-bold ${
+                              isProfit ? "text-success" : "text-destructive"
+                            }`}
+                          >
+                            {formatPercentage(pos.unrealized_pnl_percent)}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {/* Total row for IBKR */}
+                  <tr className="border-t-2 border-blue-300 font-semibold bg-blue-50/50">
+                    <td className="p-3 text-foreground" colSpan={5}>
+                      Total IBKR
+                    </td>
+                    <td className="p-3 text-center font-bold text-foreground">
+                      {formatCurrency(ibkrCurrentValue)}
+                    </td>
+                    <td className="p-3 text-center">
+                      <div
+                        className={`font-bold ${
+                          ibkrCurrentValue - ibkrInvested >= 0
+                            ? "text-success"
+                            : "text-destructive"
+                        }`}
+                      >
+                        {ibkrCurrentValue - ibkrInvested >= 0 ? "+" : ""}
+                        {formatCurrency(ibkrCurrentValue - ibkrInvested)}
+                      </div>
+                    </td>
+                    <td className="p-3 text-center">
+                      <div
+                        className={`font-bold ${
+                          ibkrCurrentValue - ibkrInvested >= 0
+                            ? "text-success"
+                            : "text-destructive"
+                        }`}
+                      >
+                        {formatPercentage(
+                          ibkrInvested > 0
+                            ? ((ibkrCurrentValue - ibkrInvested) /
+                                ibkrInvested) *
+                                100
+                            : 0
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Monthly Investment Summary Table */}
       <Card className="shadow-card">
