@@ -8,6 +8,7 @@ export type AuthContextType = {
   // sendMagicLink: (email: string) => Promise<{ error: AuthError | null }>;
   // Google OAuth flow
   signInWithGoogle: () => Promise<{ error: AuthError | null }>;
+  signInWithApple: () => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<{ error: AuthError | null }>;
 };
 
@@ -16,5 +17,6 @@ export const AuthContext = createContext<AuthContextType>({
   loading: true,
   // sendMagicLink: async () => ({ error: null }),
   signInWithGoogle: async () => ({ error: null }),
+  signInWithApple: async () => ({ error: null }),
   signOut: async () => ({ error: null }),
 });
