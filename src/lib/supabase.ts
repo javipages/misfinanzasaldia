@@ -117,6 +117,33 @@ export type Database = {
           },
         ]
       }
+      benchmark_history: {
+        Row: {
+          benchmark_name: string
+          change_percent: number | null
+          close_value: number
+          created_at: string
+          date: string
+          id: string
+        }
+        Insert: {
+          benchmark_name: string
+          change_percent?: number | null
+          close_value: number
+          created_at?: string
+          date: string
+          id?: string
+        }
+        Update: {
+          benchmark_name?: string
+          change_percent?: number | null
+          close_value?: number
+          created_at?: string
+          date?: string
+          id?: string
+        }
+        Relationships: []
+      }
       expense_categories: {
         Row: {
           created_at: string
@@ -172,6 +199,60 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_entries: {
+        Row: {
+          amount: number
+          category_id: string
+          created_at: string
+          description: string | null
+          id: string
+          month: number
+          subcategory_id: string | null
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          amount: number
+          category_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          month: number
+          subcategory_id?: string | null
+          updated_at?: string
+          user_id?: string
+          year: number
+        }
+        Update: {
+          amount?: number
+          category_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          month?: number
+          subcategory_id?: string | null
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_entries_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "expense_subcategories"
             referencedColumns: ["id"]
           },
         ]
@@ -246,60 +327,6 @@ export type Database = {
           },
         ]
       }
-      expense_entries: {
-        Row: {
-          amount: number
-          category_id: string
-          created_at: string
-          description: string | null
-          id: string
-          month: number
-          subcategory_id: string | null
-          updated_at: string
-          user_id: string
-          year: number
-        }
-        Insert: {
-          amount: number
-          category_id: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          month: number
-          subcategory_id?: string | null
-          updated_at?: string
-          user_id?: string
-          year: number
-        }
-        Update: {
-          amount?: number
-          category_id?: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          month?: number
-          subcategory_id?: string | null
-          updated_at?: string
-          user_id?: string
-          year?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "expense_entries_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "expense_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "expense_entries_subcategory_id_fkey"
-            columns: ["subcategory_id"]
-            isOneToOne: false
-            referencedRelation: "expense_subcategories"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       goals: {
         Row: {
           category: string | null
@@ -339,6 +366,138 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
           year?: number | null
+        }
+        Relationships: []
+      }
+      ibkr_config: {
+        Row: {
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          query_id: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          query_id: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          query_id?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ibkr_positions: {
+        Row: {
+          asset_category: string | null
+          conid: string
+          cost_basis: number
+          created_at: string
+          currency: string | null
+          current_price: number
+          description: string | null
+          exchange: string | null
+          id: string
+          isin: string | null
+          last_sync_at: string
+          position_value: number | null
+          quantity: number
+          symbol: string
+          unrealized_pnl: number | null
+          unrealized_pnl_percent: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          asset_category?: string | null
+          conid: string
+          cost_basis: number
+          created_at?: string
+          currency?: string | null
+          current_price: number
+          description?: string | null
+          exchange?: string | null
+          id?: string
+          isin?: string | null
+          last_sync_at?: string
+          position_value?: number | null
+          quantity: number
+          symbol: string
+          unrealized_pnl?: number | null
+          unrealized_pnl_percent?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          asset_category?: string | null
+          conid?: string
+          cost_basis?: number
+          created_at?: string
+          currency?: string | null
+          current_price?: number
+          description?: string | null
+          exchange?: string | null
+          id?: string
+          isin?: string | null
+          last_sync_at?: string
+          position_value?: number | null
+          quantity?: number
+          symbol?: string
+          unrealized_pnl?: number | null
+          unrealized_pnl_percent?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ibkr_sync_history: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          positions_count: number
+          status: string
+          sync_date: string
+          total_cost_usd: number
+          total_pnl_usd: number
+          total_value_usd: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          positions_count?: number
+          status?: string
+          sync_date?: string
+          total_cost_usd?: number
+          total_pnl_usd?: number
+          total_value_usd?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          positions_count?: number
+          status?: string
+          sync_date?: string
+          total_cost_usd?: number
+          total_pnl_usd?: number
+          total_value_usd?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -397,6 +556,60 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "income_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      income_entries: {
+        Row: {
+          amount: number
+          category_id: string
+          created_at: string
+          description: string | null
+          id: string
+          month: number
+          subcategory_id: string | null
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          amount: number
+          category_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          month: number
+          subcategory_id?: string | null
+          updated_at?: string
+          user_id?: string
+          year: number
+        }
+        Update: {
+          amount?: number
+          category_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          month?: number
+          subcategory_id?: string | null
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "income_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "income_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "income_entries_subcategory_id_fkey"
+            columns: ["subcategory_id"]
+            isOneToOne: false
+            referencedRelation: "income_subcategories"
             referencedColumns: ["id"]
           },
         ]
@@ -464,60 +677,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "income_subcategories_years_subcategory_id_fkey"
-            columns: ["subcategory_id"]
-            isOneToOne: false
-            referencedRelation: "income_subcategories"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      income_entries: {
-        Row: {
-          amount: number
-          category_id: string
-          created_at: string
-          description: string | null
-          id: string
-          month: number
-          subcategory_id: string | null
-          updated_at: string
-          user_id: string
-          year: number
-        }
-        Insert: {
-          amount: number
-          category_id: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          month: number
-          subcategory_id?: string | null
-          updated_at?: string
-          user_id?: string
-          year: number
-        }
-        Update: {
-          amount?: number
-          category_id?: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          month?: number
-          subcategory_id?: string | null
-          updated_at?: string
-          user_id?: string
-          year?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "income_entries_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "income_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "income_entries_subcategory_id_fkey"
             columns: ["subcategory_id"]
             isOneToOne: false
             referencedRelation: "income_subcategories"
@@ -669,10 +828,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      import_budget_from_json: {
-        Args: { budget_json: Json }
-        Returns: Json
-      }
+      delete_user: { Args: never; Returns: undefined }
+      import_budget_from_json: { Args: { budget_json: Json }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
