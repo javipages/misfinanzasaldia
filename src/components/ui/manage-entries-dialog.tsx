@@ -40,7 +40,9 @@ export function ManageEntriesDialog({
   onDelete,
   onClose,
 }: Props) {
-  const [local, setLocal] = useState<EditableEntry[]>(entries);
+  const [local, setLocal] = useState<{ id: string; amount: string; description: string | null }[]>(
+    entries.map(e => ({ ...e, amount: String(e.amount) }))
+  );
   const [newAmount, setNewAmount] = useState<string>("");
   const [newDesc, setNewDesc] = useState<string>("");
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -48,7 +50,7 @@ export function ManageEntriesDialog({
 
   useEffect(() => {
     if (open) {
-      setLocal(entries);
+      setLocal(entries.map(e => ({ ...e, amount: String(e.amount) })));
       setNewAmount("");
       setNewDesc("");
       requestAnimationFrame(() => {
@@ -85,7 +87,7 @@ export function ManageEntriesDialog({
     const current = local.find((x) => x.id === entryId);
     if (!current) return;
     await onUpdate(entryId, {
-      amount: current.amount,
+      amount: Number(current.amount.replace(',', '.') || 0),
       description: current.description ?? null,
     });
   };
@@ -169,9 +171,7 @@ export function ManageEntriesDialog({
                         x.id === e.id
                           ? {
                               ...x,
-                              amount: Number(
-                                (ev.target.value ?? "").replace(",", ".") || 0
-                              ),
+                              amount: ev.target.value,
                             }
                           : x
                       )
@@ -187,7 +187,7 @@ export function ManageEntriesDialog({
                     const current = local.find((x) => x.id === e.id);
                     if (!current) return;
                     await onUpdate(e.id, {
-                      amount: current.amount,
+                      amount: Number(current.amount.replace(',', '.') || 0),
                       description: current.description ?? null,
                     });
                   }}
