@@ -113,7 +113,7 @@ export function AddMovementDialog({
         type,
         categoryId,
         month,
-        amount: Number(amount || 0),
+        amount: Number(amount.replace(',', '.') || 0),
         description: description || null,
       });
       onClose();
@@ -217,7 +217,7 @@ export function AddMovementDialog({
             <div className="space-y-2">
               <label className="text-sm">Cantidad (€)</label>
               <Input
-                type="number"
+                type="text"
                 value={amount}
                 ref={amountInputRef}
                 onChange={(e) => setAmount(e.target.value)}

@@ -828,6 +828,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_user: { Args: never; Returns: undefined }
       import_budget_from_json: { Args: { budget_json: Json }; Returns: Json }
     }
     Enums: {
