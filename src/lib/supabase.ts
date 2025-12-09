@@ -470,6 +470,8 @@ export type Database = {
           positions_count: number
           status: string
           sync_date: string
+          total_cash_eur: number
+          total_cash_usd: number
           total_cost_usd: number
           total_pnl_usd: number
           total_value_usd: number
@@ -482,6 +484,8 @@ export type Database = {
           positions_count?: number
           status?: string
           sync_date?: string
+          total_cash_eur?: number
+          total_cash_usd?: number
           total_cost_usd?: number
           total_pnl_usd?: number
           total_value_usd?: number
@@ -494,6 +498,8 @@ export type Database = {
           positions_count?: number
           status?: string
           sync_date?: string
+          total_cash_eur?: number
+          total_cash_usd?: number
           total_cost_usd?: number
           total_pnl_usd?: number
           total_value_usd?: number

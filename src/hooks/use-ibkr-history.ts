@@ -9,6 +9,8 @@ export interface IBKRHistoryEntry {
   total_value_usd: number;
   total_cost_usd: number;
   total_pnl_usd: number;
+  total_cash_eur: number;
+  total_cash_usd: number;
   status: "success" | "error";
   error_message: string | null;
   created_at: string;

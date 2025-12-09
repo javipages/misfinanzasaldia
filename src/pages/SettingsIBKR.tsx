@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/useAuth";
 import { useIBKRHistory } from "@/hooks/use-ibkr-history";
 
 const SettingsIBKR = () => {
-  const { session } = useAuth();
+  useAuth(); // Ensures user is authenticated
   const [token, setToken] = useState("");
   const [queryId, setQueryId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,7 +29,7 @@ const SettingsIBKR = () => {
 
   const loadConfig = async () => {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("ibkr_config")
         .select("last_sync_at")
         .single();

@@ -53,8 +53,9 @@ serve(async (req) => {
         const queryId = await decrypt(config.query_id)
 
         // Fetch from IBKR
-        const positions = await fetchIBKRPositions(token, queryId)
+        const { positions, cashBalances } = await fetchIBKRData(token, queryId)
         console.log(`📦 Got ${positions.length} positions`)
+        console.log(`💰 Got cash balances: EUR=${cashBalances.EUR}, USD=${cashBalances.USD}`)
 
         // Calculate totals
         const totalValueUSD = positions.reduce((sum, pos) => sum + pos.positionValue, 0)
@@ -110,6 +111,8 @@ serve(async (req) => {
             total_value_usd: totalValueUSD,
             total_cost_usd: totalCostUSD,
             total_pnl_usd: totalPnlUSD,
+            total_cash_eur: cashBalances.EUR,
+            total_cash_usd: cashBalances.USD,
             status: 'success',
           })
 
@@ -183,8 +186,24 @@ serve(async (req) => {
   }
 })
 
-// Fetch positions from IBKR Flex Web Service
-async function fetchIBKRPositions(token: string, queryId: string) {
+// Fetch positions and cash from IBKR Flex Web Service
+async function fetchIBKRData(token: string, queryId: string): Promise<{
+  positions: Array<{
+    symbol: string
+    description: string
+    conid: string
+    isin: string | null
+    quantity: number
+    price: number
+    costBasis: number
+    positionValue: number
+    unrealizedPnl: number
+    assetCategory: string
+    currency: string
+    exchange: string
+  }>
+  cashBalances: { EUR: number; USD: number }
+}> {
   // Step 1: Request
   const requestUrl = `https://gdcdyn.interactivebrokers.com/Universal/servlet/FlexStatementService.SendRequest?t=${token}&q=${queryId}&v=3`
   const requestRes = await fetch(requestUrl)
@@ -222,7 +241,9 @@ async function fetchIBKRPositions(token: string, queryId: string) {
     // Success
     if (xml.includes('<FlexStatements')) {
       console.log('✅ Statement ready')
-      return parsePositions(xml)
+      const positions = parsePositions(xml)
+      const cashBalances = parseCashBalances(xml)
+      return { positions, cashBalances }
     }
 
     // Rate limiting
@@ -284,4 +305,62 @@ function parsePositions(xml: string) {
 
   console.log(`📊 Parsed ${positions.length} positions`)
   return positions
+}
+
+// Parse cash balances from XML CashReport section
+function parseCashBalances(xml: string): { EUR: number; USD: number } {
+  const balances = { EUR: 0, USD: 0 }
+  
+  // Find all CashReportCurrency tags (one per currency)
+  // Format: <CashReportCurrency currency="EUR" endingCash="1234.56" ... />
+  const cashRegex = /<CashReportCurrency\s+([^>]+)\/>/g
+  const matches = xml.matchAll(cashRegex)
+
+  for (const match of matches) {
+    const attributes = match[1]
+
+    const getAttr = (name: string) => {
+      const regex = new RegExp(`${name}="([^"]*)"`)
+      const attrMatch = attributes.match(regex)
+      return attrMatch ? attrMatch[1] : ''
+    }
+
+    const currency = getAttr('currency')
+    const endingCash = parseFloat(getAttr('endingCash') || '0')
+
+    if (currency === 'EUR') {
+      balances.EUR = endingCash
+    } else if (currency === 'USD') {
+      balances.USD = endingCash
+    }
+  }
+
+  // Also try CashReport tag (older format)
+  // Format: <CashReport currency="EUR" endingCash="1234.56" ... />
+  if (balances.EUR === 0 && balances.USD === 0) {
+    const cashReportRegex = /<CashReport\s+([^>]+)\/>/g
+    const cashReportMatches = xml.matchAll(cashReportRegex)
+
+    for (const match of cashReportMatches) {
+      const attributes = match[1]
+
+      const getAttr = (name: string) => {
+        const regex = new RegExp(`${name}="([^"]*)"`)
+        const attrMatch = attributes.match(regex)
+        return attrMatch ? attrMatch[1] : ''
+      }
+
+      const currency = getAttr('currency')
+      const endingCash = parseFloat(getAttr('endingCash') || '0')
+
+      if (currency === 'EUR') {
+        balances.EUR = endingCash
+      } else if (currency === 'USD') {
+        balances.USD = endingCash
+      }
+    }
+  }
+
+  console.log(`💰 Parsed cash balances: EUR=${balances.EUR}, USD=${balances.USD}`)
+  return balances
 }

@@ -15,7 +15,7 @@ import {
 } from "recharts";
 import { IBKRHistoryEntry } from "@/hooks/use-ibkr-history";
 import { convertCurrency } from "@/hooks/use-exchange-rate";
-import { useBenchmarkComparison, normalizeBenchmarkData } from "@/hooks/use-benchmark-comparison";
+import { useBenchmarkComparison } from "@/hooks/use-benchmark-comparison";
 import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
 
 interface IBKRChartsProps {

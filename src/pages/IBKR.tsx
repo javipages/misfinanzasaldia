@@ -13,9 +13,10 @@ import {
   AlertCircle,
   CheckCircle2,
   DollarSign,
+  Wallet,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useExchangeRate, convertCurrency } from "@/hooks/use-exchange-rate";
+import { useExchangeRate } from "@/hooks/use-exchange-rate";
 import { useIBKRHistory } from "@/hooks/use-ibkr-history";
 import { IBKRCharts } from "@/components/IBKRCharts";
 import {
@@ -29,18 +30,18 @@ import {
 interface IBKRPosition {
   id: string;
   symbol: string;
-  description: string;
+  description: string | null;
   conid: string;
   isin: string | null;
   quantity: number;
   current_price: number;
   cost_basis: number;
-  position_value: number;
-  unrealized_pnl: number;
-  unrealized_pnl_percent: number;
-  asset_category: string;
-  currency: string;
-  exchange: string;
+  position_value: number | null;
+  unrealized_pnl: number | null;
+  unrealized_pnl_percent: number | null;
+  asset_category: string | null;
+  currency: string | null;
+  exchange: string | null;
   last_sync_at: string;
 }
 
@@ -142,8 +143,11 @@ const IBKR = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    // Convert from USD to display currency
-    const convertedAmount = convertCurrency(amount, exchangeRate);
+    // Data from IBKR is in USD
+    // Convert to EUR only if EUR display is selected
+    const convertedAmount = displayCurrency === "EUR" && exchangeRate
+      ? amount * exchangeRate  // USD to EUR
+      : amount;
 
     return new Intl.NumberFormat("es-ES", {
       style: "currency",
@@ -159,26 +163,32 @@ const IBKR = () => {
     });
   };
 
-  // Calculate totals (in USD, will be converted when displaying)
-  const totalValueUSD = positions.reduce(
-    (sum, pos) => sum + pos.position_value,
-    0
-  );
-  const totalPnlUSD = positions.reduce(
-    (sum, pos) => sum + pos.unrealized_pnl,
-    0
-  );
-  const totalCostUSD = positions.reduce(
-    (sum, pos) => sum + pos.quantity * pos.cost_basis,
-    0
-  );
-  const totalPnlPercent =
-    totalCostUSD > 0 ? (totalPnlUSD / totalCostUSD) * 100 : 0;
+  // Get latest totals from sync history (already calculated in USD)
+  const latestHistory = history.length > 0 ? history[0] : null;
+  const totalValueUSD = latestHistory?.total_value_usd ?? 0;
+  const totalCostUSD = latestHistory?.total_cost_usd ?? 0;
+  const totalPnlUSD = latestHistory?.total_pnl_usd ?? 0;
+  const cashEUR = latestHistory?.total_cash_eur ?? 0;
+  const cashUSD = latestHistory?.total_cash_usd ?? 0;
 
-  // Convert to display currency
-  const totalValue = convertCurrency(totalValueUSD, exchangeRate);
-  const totalPnl = convertCurrency(totalPnlUSD, exchangeRate);
-  const totalCost = convertCurrency(totalCostUSD, exchangeRate);
+  const totalPnlPercent = totalCostUSD > 0 ? (totalPnlUSD / totalCostUSD) * 100 : 0;
+
+  // Convert to display currency (exchangeRate is USD -> EUR)
+  const convertToDisplay = (usdAmount: number) => {
+    if (displayCurrency === "EUR" && exchangeRate) {
+      return usdAmount * exchangeRate; // USD to EUR
+    }
+    return usdAmount; // Keep as USD
+  };
+
+  const totalValue = convertToDisplay(totalValueUSD);
+  const totalPnl = convertToDisplay(totalPnlUSD);
+  const totalCost = convertToDisplay(totalCostUSD);
+  
+  // Calculate total cash in display currency
+  const totalCashInDisplayCurrency = displayCurrency === "EUR" 
+    ? cashEUR + (cashUSD * (exchangeRate || 1))
+    : (cashEUR / (exchangeRate || 1)) + cashUSD;
 
   if (loading) {
     return (
@@ -325,7 +335,7 @@ const IBKR = () => {
       {/* Summary Cards */}
       {positions.length > 0 && (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             <Card className="shadow-card">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -413,6 +423,33 @@ const IBKR = () => {
                 </div>
               </CardContent>
             </Card>
+
+            <Card className="shadow-card border-blue-200 bg-blue-50/30 dark:border-blue-900 dark:bg-blue-950/30">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                      {new Intl.NumberFormat("es-ES", {
+                        style: "currency",
+                        currency: displayCurrency,
+                        minimumFractionDigits: 2,
+                      }).format(totalCashInDisplayCurrency)}
+                    </div>
+                    <div className="text-sm text-blue-600 dark:text-blue-400">
+                      Liquidez
+                    </div>
+                    {(cashEUR > 0 || cashUSD > 0) && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {cashEUR > 0 && `€${formatNumber(cashEUR, 2)}`}
+                        {cashEUR > 0 && cashUSD > 0 && " + "}
+                        {cashUSD > 0 && `$${formatNumber(cashUSD, 2)}`}
+                      </div>
+                    )}
+                  </div>
+                  <Wallet className="h-8 w-8 text-blue-500" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Charts */}
@@ -480,30 +517,30 @@ const IBKR = () => {
                           {formatCurrency(pos.cost_basis)}
                         </td>
                         <td className="p-3 text-right font-mono font-bold">
-                          {formatCurrency(pos.position_value)}
+                          {formatCurrency(pos.position_value ?? 0)}
                         </td>
                         <td className="p-3 text-right">
                           <div
                             className={`font-mono font-bold ${
-                              pos.unrealized_pnl >= 0
+                              (pos.unrealized_pnl ?? 0) >= 0
                                 ? "text-success"
                                 : "text-destructive"
                             }`}
                           >
-                            {pos.unrealized_pnl >= 0 ? "+" : ""}
-                            {formatCurrency(pos.unrealized_pnl)}
+                            {(pos.unrealized_pnl ?? 0) >= 0 ? "+" : ""}
+                            {formatCurrency(pos.unrealized_pnl ?? 0)}
                           </div>
                         </td>
                         <td className="p-3 text-right">
                           <Badge
                             className={
-                              pos.unrealized_pnl_percent >= 0
+                              (pos.unrealized_pnl_percent ?? 0) >= 0
                                 ? "bg-green-100 text-green-800"
                                 : "bg-red-100 text-red-800"
                             }
                           >
-                            {pos.unrealized_pnl_percent >= 0 ? "+" : ""}
-                            {formatNumber(pos.unrealized_pnl_percent, 1)}%
+                            {(pos.unrealized_pnl_percent ?? 0) >= 0 ? "+" : ""}
+                            {formatNumber(pos.unrealized_pnl_percent ?? 0, 1)}%
                           </Badge>
                         </td>
                       </tr>
