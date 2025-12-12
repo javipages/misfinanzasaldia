@@ -17,6 +17,7 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  X,
 } from "lucide-react";
 import { useHoldings, type Holding } from "@/hooks/use-holdings";
 import { useExchangeRate } from "@/hooks/use-exchange-rate";
@@ -60,8 +61,8 @@ import { Label } from "@/components/ui/label";
 
 const Investments = () => {
   const [myInvestorDialogOpen, setMyInvestorDialogOpen] = useState(false);
-  const [sourceFilter, setSourceFilter] = useState<string>("all");
-  const [assetTypeFilter, setAssetTypeFilter] = useState<string>("all");
+  const [sourceFilters, setSourceFilters] = useState<string[]>([]);
+  const [assetTypeFilters, setAssetTypeFilters] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [displayCurrency, setDisplayCurrency] = useState<"USD" | "EUR">(
     () =>
@@ -77,16 +78,48 @@ const Investments = () => {
     isLoading,
     deleteHolding,
     updateHolding,
-  } = useHoldings(sourceFilter !== "all" ? { source: sourceFilter } : undefined);
+  } = useHoldings();
 
   // Sorting state
   type SortField = "name" | "source" | "asset_type" | "quantity" | "current_price" | "position_value" | "unrealized_pnl" | "unrealized_pnl_percent";
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
-  // Apply additional filters (asset type + search)
+  // Source and asset type options
+  const sourceOptions = [
+    { value: "ibkr", label: "IBKR" },
+    { value: "myinvestor", label: "MyInvestor" },
+    { value: "binance", label: "Binance" },
+    { value: "manual", label: "Manual" },
+  ];
+  const assetTypeOptions = [
+    { value: "etf", label: "ETF" },
+    { value: "stock", label: "Acciones" },
+    { value: "fund", label: "Fondos" },
+    { value: "crypto", label: "Crypto" },
+    { value: "bond", label: "Bonos" },
+    { value: "other", label: "Otros" },
+  ];
+
+  const toggleSourceFilter = (value: string) => {
+    setSourceFilters(prev => 
+      prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+    );
+  };
+
+  const toggleAssetTypeFilter = (value: string) => {
+    setAssetTypeFilters(prev => 
+      prev.includes(value) ? prev.filter(v => v !== value) : [...prev, value]
+    );
+  };
+
+  // Apply filters (source, asset type + search)
   const filteredHoldings = allHoldings.filter((h) => {
-    if (assetTypeFilter !== "all" && h.asset_type !== assetTypeFilter) return false;
+    // Source filter (if any selected)
+    if (sourceFilters.length > 0 && !sourceFilters.includes(h.source)) return false;
+    // Asset type filter (if any selected)
+    if (assetTypeFilters.length > 0 && !assetTypeFilters.includes(h.asset_type)) return false;
+    // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesName = h.name?.toLowerCase().includes(query);
@@ -510,32 +543,39 @@ const Investments = () => {
                   className="pl-10"
                 />
               </div>
-              <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Fuente" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  <SelectItem value="ibkr">IBKR</SelectItem>
-                  <SelectItem value="myinvestor">MyInvestor</SelectItem>
-                  <SelectItem value="binance">Binance</SelectItem>
-                  <SelectItem value="manual">Manual</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={assetTypeFilter} onValueChange={setAssetTypeFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="etf">ETF</SelectItem>
-                  <SelectItem value="stock">Acciones</SelectItem>
-                  <SelectItem value="fund">Fondos</SelectItem>
-                  <SelectItem value="crypto">Crypto</SelectItem>
-                  <SelectItem value="bond">Bonos</SelectItem>
-                  <SelectItem value="other">Otros</SelectItem>
-                </SelectContent>
-              </Select>
+            </div>
+            {/* Filter Chips */}
+            <div className="flex flex-wrap gap-2">
+              <span className="text-sm text-muted-foreground self-center">Fuentes:</span>
+              {sourceOptions.map((opt) => (
+                <Badge
+                  key={opt.value}
+                  variant={sourceFilters.includes(opt.value) ? "default" : "outline"}
+                  className="cursor-pointer hover:bg-primary/80 transition-colors"
+                  onClick={() => toggleSourceFilter(opt.value)}
+                >
+                  {opt.label}
+                  {sourceFilters.includes(opt.value) && (
+                    <X className="h-3 w-3 ml-1" />
+                  )}
+                </Badge>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="text-sm text-muted-foreground self-center">Tipos:</span>
+              {assetTypeOptions.map((opt) => (
+                <Badge
+                  key={opt.value}
+                  variant={assetTypeFilters.includes(opt.value) ? "default" : "outline"}
+                  className="cursor-pointer hover:bg-primary/80 transition-colors"
+                  onClick={() => toggleAssetTypeFilter(opt.value)}
+                >
+                  {opt.label}
+                  {assetTypeFilters.includes(opt.value) && (
+                    <X className="h-3 w-3 ml-1" />
+                  )}
+                </Badge>
+              ))}
             </div>
           </div>
         </CardHeader>
@@ -549,29 +589,77 @@ const Investments = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left p-3 font-semibold text-foreground">
-                      Nombre
+                    <th 
+                      className="text-left p-3 font-semibold text-foreground cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort("name")}
+                    >
+                      <div className="flex items-center">
+                        Nombre
+                        <SortIcon field="name" />
+                      </div>
                     </th>
-                    <th className="text-center p-3 font-semibold text-foreground">
-                      Fuente
+                    <th 
+                      className="text-center p-3 font-semibold text-foreground cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort("source")}
+                    >
+                      <div className="flex items-center justify-center">
+                        Fuente
+                        <SortIcon field="source" />
+                      </div>
                     </th>
-                    <th className="text-center p-3 font-semibold text-foreground">
-                      Tipo
+                    <th 
+                      className="text-center p-3 font-semibold text-foreground cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort("asset_type")}
+                    >
+                      <div className="flex items-center justify-center">
+                        Tipo
+                        <SortIcon field="asset_type" />
+                      </div>
                     </th>
-                    <th className="text-center p-3 font-semibold text-foreground">
-                      Cantidad
+                    <th 
+                      className="text-center p-3 font-semibold text-foreground cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort("quantity")}
+                    >
+                      <div className="flex items-center justify-center">
+                        Cantidad
+                        <SortIcon field="quantity" />
+                      </div>
                     </th>
-                    <th className="text-center p-3 font-semibold text-foreground">
-                      Precio
+                    <th 
+                      className="text-center p-3 font-semibold text-foreground cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort("current_price")}
+                    >
+                      <div className="flex items-center justify-center">
+                        Precio
+                        <SortIcon field="current_price" />
+                      </div>
                     </th>
-                    <th className="text-center p-3 font-semibold text-foreground">
-                      Valor
+                    <th 
+                      className="text-center p-3 font-semibold text-foreground cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort("position_value")}
+                    >
+                      <div className="flex items-center justify-center">
+                        Valor
+                        <SortIcon field="position_value" />
+                      </div>
                     </th>
-                    <th className="text-center p-3 font-semibold text-foreground">
-                      G/P
+                    <th 
+                      className="text-center p-3 font-semibold text-foreground cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort("unrealized_pnl")}
+                    >
+                      <div className="flex items-center justify-center">
+                        G/P
+                        <SortIcon field="unrealized_pnl" />
+                      </div>
                     </th>
-                    <th className="text-center p-3 font-semibold text-foreground">
-                      %
+                    <th 
+                      className="text-center p-3 font-semibold text-foreground cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleSort("unrealized_pnl_percent")}
+                    >
+                      <div className="flex items-center justify-center">
+                        %
+                        <SortIcon field="unrealized_pnl_percent" />
+                      </div>
                     </th>
                     <th className="text-center p-3 font-semibold text-foreground">
                       Acciones
