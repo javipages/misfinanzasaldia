@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { useHoldings } from "@/hooks/use-holdings";
 import { useExchangeRate } from "@/hooks/use-exchange-rate";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import {
   Select,
   SelectContent,
@@ -58,6 +60,19 @@ const Investments = () => {
     isLoading,
     deleteHolding,
   } = useHoldings(sourceFilter !== "all" ? { source: sourceFilter } : undefined);
+
+  // Check if user has IBKR configured
+  const { data: hasIbkrConfig } = useQuery({
+    queryKey: ["ibkr_config_exists"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ibkr_config")
+        .select("id")
+        .limit(1)
+        .maybeSingle();
+      return !!data;
+    },
+  });
 
   const handleCurrencyChange = (currency: "USD" | "EUR") => {
     setDisplayCurrency(currency);
@@ -195,17 +210,19 @@ const Investments = () => {
             <FileSpreadsheet className="h-4 w-4 mr-2" />
             Importar MyInvestor
           </Button>
-          <Button variant="outline" asChild className="w-full sm:w-auto">
-            <a href="/ibkr" className="flex items-center gap-1">
-              IBKR Detalles
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          </Button>
+          {hasIbkrConfig && (
+            <Button variant="outline" asChild className="w-full sm:w-auto">
+              <a href="/ibkr" className="flex items-center gap-1">
+                IBKR Detalles
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+      <div className={`grid grid-cols-1 gap-4 ${hasIbkrConfig ? "md:grid-cols-5" : "md:grid-cols-4"}`}>
         <Card className="shadow-card">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -290,21 +307,23 @@ const Investments = () => {
           </CardContent>
         </Card>
 
-        <Card className="shadow-card border-blue-200 bg-blue-50/30 dark:border-blue-900 dark:bg-blue-950/30">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                  {formatCurrency(totalCash)}
+        {hasIbkrConfig && (
+          <Card className="shadow-card border-blue-200 bg-blue-50/30 dark:border-blue-900 dark:bg-blue-950/30">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                    {formatCurrency(totalCash)}
+                  </div>
+                  <div className="text-sm text-blue-600 dark:text-blue-400">
+                    Liquidez (IBKR)
+                  </div>
                 </div>
-                <div className="text-sm text-blue-600 dark:text-blue-400">
-                  Liquidez (IBKR)
-                </div>
+                <Wallet className="h-8 w-8 text-blue-500" />
               </div>
-              <Wallet className="h-8 w-8 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Filters */}
