@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { Separator } from "@/components/ui/separator";
-import { TrendingUp, Tags, Wallet, LineChart } from "lucide-react";
+import { TrendingUp, Tags, Wallet, LineChart, Bitcoin } from "lucide-react";
 import { NavigationCard } from "@/components/NavigationCard";
 
 function SettingsHome() {
@@ -31,6 +31,15 @@ function SettingsHome() {
       href: "/settings/ibkr",
       color: "text-purple-600",
       bgColor: "bg-purple-50 dark:bg-purple-950",
+    },
+    {
+      title: "Binance",
+      description:
+        "Conecta tu cuenta de Binance para sincronizar tus criptomonedas",
+      icon: Bitcoin,
+      href: "/settings/binance",
+      color: "text-orange-600",
+      bgColor: "bg-orange-50 dark:bg-orange-950",
     },
   ];
 

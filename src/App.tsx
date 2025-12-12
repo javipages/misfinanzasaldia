@@ -21,6 +21,7 @@ import Settings, { SettingsHome } from "@/pages/Settings";
 import SettingsCategories from "@/pages/SettingsCategories";
 import SettingsAssets from "@/pages/SettingsAssets";
 import SettingsIBKR from "@/pages/SettingsIBKR";
+import SettingsBinance from "@/pages/SettingsBinance";
 import IBKR from "@/pages/IBKR";
 import PublicRoute from "@/components/PublicRoute";
 
@@ -58,6 +59,7 @@ function App() {
                 <Route path="categories" element={<SettingsCategories />} />
                 <Route path="assets" element={<SettingsAssets />} />
                 <Route path="ibkr" element={<SettingsIBKR />} />
+                <Route path="binance" element={<SettingsBinance />} />
               </Route>
               <Route
                 path="/settings/categories"
@@ -76,3 +78,4 @@ function App() {
 }
 
 export default App;
+

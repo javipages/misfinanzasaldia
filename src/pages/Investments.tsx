@@ -12,8 +12,13 @@ import {
   DollarSign,
   FileSpreadsheet,
   Wallet,
+  Pencil,
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
-import { useHoldings } from "@/hooks/use-holdings";
+import { useHoldings, type Holding } from "@/hooks/use-holdings";
 import { useExchangeRate } from "@/hooks/use-exchange-rate";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -42,10 +47,22 @@ import {
   SummaryCardsSkeleton,
   TableSkeleton,
 } from "@/components/PageSkeletons";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const Investments = () => {
   const [myInvestorDialogOpen, setMyInvestorDialogOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [assetTypeFilter, setAssetTypeFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [displayCurrency, setDisplayCurrency] = useState<"USD" | "EUR">(
     () =>
       (localStorage.getItem("investments_display_currency") as "USD" | "EUR") || "EUR"
@@ -55,11 +72,100 @@ const Investments = () => {
   const { rate: exchangeRate } = useExchangeRate("USD", "EUR");
 
   const {
-    holdings,
+    holdings: allHoldings,
     cashTotals,
     isLoading,
     deleteHolding,
+    updateHolding,
   } = useHoldings(sourceFilter !== "all" ? { source: sourceFilter } : undefined);
+
+  // Sorting state
+  type SortField = "name" | "source" | "asset_type" | "quantity" | "current_price" | "position_value" | "unrealized_pnl" | "unrealized_pnl_percent";
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  // Apply additional filters (asset type + search)
+  const filteredHoldings = allHoldings.filter((h) => {
+    if (assetTypeFilter !== "all" && h.asset_type !== assetTypeFilter) return false;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesName = h.name?.toLowerCase().includes(query);
+      const matchesSymbol = h.symbol?.toLowerCase().includes(query);
+      const matchesIsin = h.isin?.toLowerCase().includes(query);
+      if (!matchesName && !matchesSymbol && !matchesIsin) return false;
+    }
+    return true;
+  });
+
+  // Apply sorting
+  const holdings = [...filteredHoldings].sort((a, b) => {
+    let aVal: number | string = 0;
+    let bVal: number | string = 0;
+    
+    switch (sortField) {
+      case "name":
+        aVal = (a.symbol || a.name || "").toLowerCase();
+        bVal = (b.symbol || b.name || "").toLowerCase();
+        break;
+      case "source":
+        aVal = a.source;
+        bVal = b.source;
+        break;
+      case "asset_type":
+        aVal = a.asset_type;
+        bVal = b.asset_type;
+        break;
+      case "quantity":
+        aVal = a.quantity;
+        bVal = b.quantity;
+        break;
+      case "current_price":
+        aVal = a.current_price || 0;
+        bVal = b.current_price || 0;
+        break;
+      case "position_value":
+        aVal = a.position_value;
+        bVal = b.position_value;
+        break;
+      case "unrealized_pnl":
+        aVal = a.unrealized_pnl;
+        bVal = b.unrealized_pnl;
+        break;
+      case "unrealized_pnl_percent":
+        aVal = a.unrealized_pnl_percent;
+        bVal = b.unrealized_pnl_percent;
+        break;
+    }
+
+    if (typeof aVal === "string" && typeof bVal === "string") {
+      return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    }
+    return sortDirection === "asc" ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
+  });
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />;
+    return sortDirection === "asc" 
+      ? <ArrowUp className="h-3 w-3 ml-1" />
+      : <ArrowDown className="h-3 w-3 ml-1" />;
+  };
+
+  // Edit dialog state
+  const [editingHolding, setEditingHolding] = useState<Holding | null>(null);
+  const [editForm, setEditForm] = useState({
+    cost_basis: "",
+    current_price: "",
+    quantity: "",
+  });
 
   // Check if user has IBKR configured
   const { data: hasIbkrConfig } = useQuery({
@@ -87,6 +193,32 @@ const Investments = () => {
     }
   };
 
+  const handleEditClick = (holding: Holding) => {
+    setEditingHolding(holding);
+    setEditForm({
+      cost_basis: holding.cost_basis?.toString() || "",
+      current_price: holding.current_price?.toString() || "",
+      quantity: holding.quantity.toString(),
+    });
+  };
+
+  const handleEditSave = async () => {
+    if (!editingHolding) return;
+    try {
+      await updateHolding.mutateAsync({
+        id: editingHolding.id,
+        input: {
+          cost_basis: editForm.cost_basis ? parseFloat(editForm.cost_basis) : undefined,
+          current_price: editForm.current_price ? parseFloat(editForm.current_price) : undefined,
+          quantity: parseFloat(editForm.quantity),
+        },
+      });
+      setEditingHolding(null);
+    } catch (error) {
+      console.error("Error updating holding:", error);
+    }
+  };
+
   const getAssetTypeConfig = (type: string) => {
     const configs: Record<string, { label: string; color: string }> = {
       etf: { label: "ETF", color: "bg-blue-100 text-blue-800" },
@@ -103,6 +235,7 @@ const Investments = () => {
     const configs: Record<string, { label: string; color: string }> = {
       ibkr: { label: "IBKR", color: "bg-blue-50 text-blue-700 border-blue-300" },
       myinvestor: { label: "MyInvestor", color: "bg-purple-50 text-purple-700 border-purple-300" },
+      binance: { label: "Binance", color: "bg-orange-50 text-orange-700 border-orange-300" },
       manual: { label: "Manual", color: "bg-gray-50 text-gray-700 border-gray-300" },
     };
     return configs[source] || configs.manual;
@@ -326,60 +459,85 @@ const Investments = () => {
         )}
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-4 items-center">
-        <Select value={sourceFilter} onValueChange={setSourceFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrar por fuente" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas las fuentes</SelectItem>
-            <SelectItem value="ibkr">IBKR</SelectItem>
-            <SelectItem value="myinvestor">MyInvestor</SelectItem>
-            <SelectItem value="manual">Manual</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={displayCurrency} onValueChange={handleCurrencyChange}>
-          <SelectTrigger className="w-[120px]">
-            <SelectValue>
-              {displayCurrency === "USD" ? (
-                <div className="flex items-center gap-1">
-                  <DollarSign className="h-3 w-3" />
-                  USD
-                </div>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <Euro className="h-3 w-3" />
-                  EUR
-                </div>
-              )}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="USD">
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                USD
-              </div>
-            </SelectItem>
-            <SelectItem value="EUR">
-              <div className="flex items-center gap-2">
-                <Euro className="h-4 w-4" />
-                EUR
-              </div>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
       {/* Holdings Table */}
       <Card className="shadow-card">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Portafolio
-            <Badge variant="secondary">{holdings.length}</Badge>
-          </CardTitle>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                Portafolio
+                <Badge variant="secondary">{holdings.length}</Badge>
+              </CardTitle>
+              <Select value={displayCurrency} onValueChange={handleCurrencyChange}>
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue>
+                    {displayCurrency === "USD" ? (
+                      <div className="flex items-center gap-1">
+                        <DollarSign className="h-3 w-3" />
+                        USD
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <Euro className="h-3 w-3" />
+                        EUR
+                      </div>
+                    )}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" />
+                      USD
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="EUR">
+                    <div className="flex items-center gap-2">
+                      <Euro className="h-4 w-4" />
+                      EUR
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-wrap gap-3 items-center">
+              <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Fuente" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  <SelectItem value="ibkr">IBKR</SelectItem>
+                  <SelectItem value="myinvestor">MyInvestor</SelectItem>
+                  <SelectItem value="binance">Binance</SelectItem>
+                  <SelectItem value="manual">Manual</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={assetTypeFilter} onValueChange={setAssetTypeFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="etf">ETF</SelectItem>
+                  <SelectItem value="stock">Acciones</SelectItem>
+                  <SelectItem value="fund">Fondos</SelectItem>
+                  <SelectItem value="crypto">Crypto</SelectItem>
+                  <SelectItem value="bond">Bonos</SelectItem>
+                  <SelectItem value="other">Otros</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {holdings.length === 0 ? (
@@ -496,42 +654,52 @@ const Investments = () => {
                           </Badge>
                         </td>
                         <td className="p-3 text-center">
-                          {holding.source === "manual" && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Eliminar inversión
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    ¿Estás seguro de que quieres eliminar "
-                                    {holding.name}"? Esta acción no se puede
-                                    deshacer.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() =>
-                                      handleDeleteHolding(holding.id)
-                                    }
-                                    className="bg-destructive hover:bg-destructive/90"
+                          <div className="flex items-center justify-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0"
+                              onClick={() => handleEditClick(holding)}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            {holding.source === "manual" && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                                   >
-                                    Eliminar
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          )}
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Eliminar inversión
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      ¿Estás seguro de que quieres eliminar "
+                                      {holding.name}"? Esta acción no se puede
+                                      deshacer.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() =>
+                                        handleDeleteHolding(holding.id)
+                                      }
+                                      className="bg-destructive hover:bg-destructive/90"
+                                    >
+                                      Eliminar
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -548,6 +716,69 @@ const Investments = () => {
         open={myInvestorDialogOpen}
         onClose={() => setMyInvestorDialogOpen(false)}
       />
+
+      {/* Edit Holding Dialog */}
+      <Dialog open={!!editingHolding} onOpenChange={(open) => !open && setEditingHolding(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Inversión</DialogTitle>
+            <DialogDescription>
+              {editingHolding?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="quantity" className="text-right">
+                Cantidad
+              </Label>
+              <Input
+                id="quantity"
+                type="number"
+                step="0.0001"
+                value={editForm.quantity}
+                onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cost_basis" className="text-right">
+                Coste
+              </Label>
+              <Input
+                id="cost_basis"
+                type="number"
+                step="0.01"
+                value={editForm.cost_basis}
+                onChange={(e) => setEditForm({ ...editForm, cost_basis: e.target.value })}
+                className="col-span-3"
+                placeholder="Precio de compra por unidad"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="current_price" className="text-right">
+                Precio Actual
+              </Label>
+              <Input
+                id="current_price"
+                type="number"
+                step="0.01"
+                value={editForm.current_price}
+                onChange={(e) => setEditForm({ ...editForm, current_price: e.target.value })}
+                className="col-span-3"
+                placeholder="Precio actual por unidad"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingHolding(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEditSave} disabled={updateHolding.isPending}>
+              {updateHolding.isPending ? "Guardando..." : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

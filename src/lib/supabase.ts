@@ -144,6 +144,69 @@ export type Database = {
         }
         Relationships: []
       }
+      binance_config: {
+        Row: {
+          api_key: string
+          api_secret: string
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          api_key: string
+          api_secret: string
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          api_key?: string
+          api_secret?: string
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cash_balances: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          last_sync_at: string | null
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency: string
+          id?: string
+          last_sync_at?: string | null
+          source: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          last_sync_at?: string | null
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       expense_categories: {
         Row: {
           created_at: string
@@ -369,6 +432,124 @@ export type Database = {
         }
         Relationships: []
       }
+      holding_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          holding_id: string
+          id: string
+          imported_from: string | null
+          price: number | null
+          quantity: number | null
+          transaction_date: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          holding_id: string
+          id?: string
+          imported_from?: string | null
+          price?: number | null
+          quantity?: number | null
+          transaction_date: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          holding_id?: string
+          id?: string
+          imported_from?: string | null
+          price?: number | null
+          quantity?: number | null
+          transaction_date?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "holding_transactions_holding_id_fkey"
+            columns: ["holding_id"]
+            isOneToOne: false
+            referencedRelation: "holdings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      holdings: {
+        Row: {
+          account_id: string | null
+          asset_type: string
+          cost_basis: number | null
+          created_at: string
+          currency: string
+          current_price: number | null
+          exchange: string | null
+          external_id: string | null
+          id: string
+          isin: string | null
+          last_price_update: string | null
+          name: string
+          quantity: number
+          source: string
+          symbol: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          asset_type: string
+          cost_basis?: number | null
+          created_at?: string
+          currency?: string
+          current_price?: number | null
+          exchange?: string | null
+          external_id?: string | null
+          id?: string
+          isin?: string | null
+          last_price_update?: string | null
+          name: string
+          quantity?: number
+          source: string
+          symbol?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          asset_type?: string
+          cost_basis?: number | null
+          created_at?: string
+          currency?: string
+          current_price?: number | null
+          exchange?: string | null
+          external_id?: string | null
+          id?: string
+          isin?: string | null
+          last_price_update?: string | null
+          name?: string
+          quantity?: number
+          source?: string
+          symbol?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "holdings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ibkr_config: {
         Row: {
           created_at: string
@@ -470,8 +651,8 @@ export type Database = {
           positions_count: number
           status: string
           sync_date: string
-          total_cash_eur: number
-          total_cash_usd: number
+          total_cash_eur: number | null
+          total_cash_usd: number | null
           total_cost_usd: number
           total_pnl_usd: number
           total_value_usd: number
@@ -484,8 +665,8 @@ export type Database = {
           positions_count?: number
           status?: string
           sync_date?: string
-          total_cash_eur?: number
-          total_cash_usd?: number
+          total_cash_eur?: number | null
+          total_cash_usd?: number | null
           total_cost_usd?: number
           total_pnl_usd?: number
           total_value_usd?: number
@@ -498,8 +679,8 @@ export type Database = {
           positions_count?: number
           status?: string
           sync_date?: string
-          total_cash_eur?: number
-          total_cash_usd?: number
+          total_cash_eur?: number | null
+          total_cash_usd?: number | null
           total_cost_usd?: number
           total_pnl_usd?: number
           total_value_usd?: number
@@ -783,6 +964,44 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "asset_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      myinvestor_fund_mappings: {
+        Row: {
+          created_at: string
+          id: string
+          investment_id: string
+          isin: string
+          shares: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          investment_id: string
+          isin: string
+          shares?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          investment_id?: string
+          isin?: string
+          shares?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "myinvestor_fund_mappings_investment_id_fkey"
+            columns: ["investment_id"]
+            isOneToOne: false
+            referencedRelation: "investments"
             referencedColumns: ["id"]
           },
         ]
