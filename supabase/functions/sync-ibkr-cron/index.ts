@@ -62,38 +62,57 @@ serve(async (req) => {
         const totalCostUSD = positions.reduce((sum, pos) => sum + (pos.quantity * pos.costBasis), 0)
         const totalPnlUSD = positions.reduce((sum, pos) => sum + pos.unrealizedPnl, 0)
 
-        // Update/insert positions
+        // Update/insert holdings
         for (const pos of positions) {
           if (pos.quantity === 0) continue
 
-          const pnlPercent = pos.costBasis > 0
-            ? ((pos.price - pos.costBasis) / pos.costBasis) * 100
-            : 0
-
-          const positionData = {
+          const holdingData = {
             user_id: config.user_id,
             symbol: pos.symbol,
-            description: pos.description,
-            conid: pos.conid,
             isin: pos.isin,
+            name: pos.description || pos.symbol,
+            source: 'ibkr',
+            asset_type: mapAssetCategory(pos.assetCategory),
             quantity: pos.quantity,
-            current_price: pos.price,
             cost_basis: pos.costBasis,
-            position_value: pos.positionValue,
-            unrealized_pnl: pos.unrealizedPnl,
-            unrealized_pnl_percent: pnlPercent,
-            asset_category: pos.assetCategory,
-            currency: pos.currency,
+            current_price: pos.price,
+            currency: pos.currency || 'USD',
+            external_id: pos.conid,
             exchange: pos.exchange,
-            last_sync_at: new Date().toISOString(),
+            last_price_update: new Date().toISOString(),
           }
 
-          // Upsert position
+          // Upsert holding
           await supabase
-            .from('ibkr_positions')
-            .upsert(positionData, {
-              onConflict: 'user_id,conid',
+            .from('holdings')
+            .upsert(holdingData, {
+              onConflict: 'user_id,source,external_id',
             })
+        }
+
+        // Update cash balances
+        if (cashBalances.EUR > 0) {
+          await supabase
+            .from('cash_balances')
+            .upsert({
+              user_id: config.user_id,
+              source: 'ibkr',
+              currency: 'EUR',
+              amount: cashBalances.EUR,
+              last_sync_at: new Date().toISOString(),
+            }, { onConflict: 'user_id,source,currency' })
+        }
+
+        if (cashBalances.USD > 0) {
+          await supabase
+            .from('cash_balances')
+            .upsert({
+              user_id: config.user_id,
+              source: 'ibkr',
+              currency: 'USD',
+              amount: cashBalances.USD,
+              last_sync_at: new Date().toISOString(),
+            }, { onConflict: 'user_id,source,currency' })
         }
 
         // Update last sync time
@@ -185,6 +204,17 @@ serve(async (req) => {
     )
   }
 })
+
+// Map IBKR asset category to our asset_type
+function mapAssetCategory(category: string): 'etf' | 'stock' | 'fund' | 'crypto' | 'bond' | 'other' {
+  const cat = category?.toUpperCase() || ''
+  if (cat === 'STK') return 'stock'
+  if (cat === 'ETF') return 'etf'
+  if (cat === 'BOND') return 'bond'
+  if (cat === 'CRYPTO') return 'crypto'
+  if (cat === 'FUND') return 'fund'
+  return 'other'
+}
 
 // Fetch positions and cash from IBKR Flex Web Service
 async function fetchIBKRData(token: string, queryId: string): Promise<{
@@ -311,8 +341,6 @@ function parsePositions(xml: string) {
 function parseCashBalances(xml: string): { EUR: number; USD: number } {
   const balances = { EUR: 0, USD: 0 }
   
-  // Find all CashReportCurrency tags (one per currency)
-  // Format: <CashReportCurrency currency="EUR" endingCash="1234.56" ... />
   const cashRegex = /<CashReportCurrency\s+([^>]+)\/>/g
   const matches = xml.matchAll(cashRegex)
 
@@ -336,7 +364,6 @@ function parseCashBalances(xml: string): { EUR: number; USD: number } {
   }
 
   // Also try CashReport tag (older format)
-  // Format: <CashReport currency="EUR" endingCash="1234.56" ... />
   if (balances.EUR === 0 && balances.USD === 0) {
     const cashReportRegex = /<CashReport\s+([^>]+)\/>/g
     const cashReportMatches = xml.matchAll(cashReportRegex)

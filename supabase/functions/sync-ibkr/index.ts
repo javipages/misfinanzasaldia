@@ -77,58 +77,75 @@ serve(async (req) => {
     let created = 0
     let updated = 0
 
-    // Process each position
+    // Process each position - upsert to holdings table
     for (const pos of positions) {
       // Skip zero positions
       if (pos.quantity === 0) continue
 
-      // Calculate P&L percentage
-      const pnlPercent = pos.costBasis > 0
-        ? ((pos.price - pos.costBasis) / pos.costBasis) * 100
-        : 0
-
-      // Check if exists
+      // Check if exists in holdings
       const { data: existing } = await supabase
-        .from('ibkr_positions')
+        .from('holdings')
         .select('id')
         .eq('user_id', user.id)
-        .eq('conid', pos.conid)
+        .eq('source', 'ibkr')
+        .eq('external_id', pos.conid)
         .maybeSingle()
 
-      const positionData = {
+      const holdingData = {
         user_id: user.id,
         symbol: pos.symbol,
-        description: pos.description,
-        conid: pos.conid,
         isin: pos.isin,
+        name: pos.description || pos.symbol,
+        source: 'ibkr',
+        asset_type: mapAssetCategory(pos.assetCategory),
         quantity: pos.quantity,
-        current_price: pos.price,
         cost_basis: pos.costBasis,
-        position_value: pos.positionValue,
-        unrealized_pnl: pos.unrealizedPnl,
-        unrealized_pnl_percent: pnlPercent,
-        asset_category: pos.assetCategory,
-        currency: pos.currency,
+        current_price: pos.price,
+        currency: pos.currency || 'USD',
+        external_id: pos.conid,
         exchange: pos.exchange,
-        last_sync_at: new Date().toISOString(),
+        last_price_update: new Date().toISOString(),
       }
 
       if (existing) {
         // Update
         await supabase
-          .from('ibkr_positions')
-          .update(positionData)
+          .from('holdings')
+          .update(holdingData)
           .eq('id', existing.id)
-
         updated++
       } else {
         // Create
         await supabase
-          .from('ibkr_positions')
-          .insert(positionData)
-
+          .from('holdings')
+          .insert(holdingData)
         created++
       }
+    }
+
+    // Update cash balances
+    if (cashBalances.EUR > 0) {
+      await supabase
+        .from('cash_balances')
+        .upsert({
+          user_id: user.id,
+          source: 'ibkr',
+          currency: 'EUR',
+          amount: cashBalances.EUR,
+          last_sync_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,source,currency' })
+    }
+
+    if (cashBalances.USD > 0) {
+      await supabase
+        .from('cash_balances')
+        .upsert({
+          user_id: user.id,
+          source: 'ibkr',
+          currency: 'USD',
+          amount: cashBalances.USD,
+          last_sync_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,source,currency' })
     }
 
     // Calculate totals for history
@@ -203,6 +220,17 @@ serve(async (req) => {
   }
 })
 
+// Map IBKR asset category to our asset_type
+function mapAssetCategory(category: string): 'etf' | 'stock' | 'fund' | 'crypto' | 'bond' | 'other' {
+  const cat = category?.toUpperCase() || ''
+  if (cat === 'STK') return 'stock'
+  if (cat === 'ETF') return 'etf'
+  if (cat === 'BOND') return 'bond'
+  if (cat === 'CRYPTO') return 'crypto'
+  if (cat === 'FUND') return 'fund'
+  return 'other'
+}
+
 // Fetch positions and cash from IBKR Flex Web Service
 async function fetchIBKRData(token: string, queryId: string): Promise<{
   positions: Array<{
@@ -248,9 +276,7 @@ async function fetchIBKRData(token: string, queryId: string): Promise<{
   console.log(`📋 Got reference code: ${refCode}`)
 
   // Step 2: Poll for statement (max 30 attempts = 2.5 minutes)
-  // IBKR can take 1-2 minutes to generate statements
   for (let i = 0; i < 30; i++) {
-    // Wait 5 seconds between attempts (except first one)
     if (i > 0) {
       console.log(`⏳ Esperando 5 segundos antes del intento ${i + 1}/30...`)
       await new Promise((r) => setTimeout(r, 5000))
@@ -341,7 +367,6 @@ function parseCashBalances(xml: string): { EUR: number; USD: number } {
   const balances = { EUR: 0, USD: 0 }
   
   // Find all CashReportCurrency tags (one per currency)
-  // Format: <CashReportCurrency currency="EUR" endingCash="1234.56" ... />
   const cashRegex = /<CashReportCurrency\s+([^>]+)\/>/g
   const matches = xml.matchAll(cashRegex)
 
@@ -365,7 +390,6 @@ function parseCashBalances(xml: string): { EUR: number; USD: number } {
   }
 
   // Also try CashReport tag (older format)
-  // Format: <CashReport currency="EUR" endingCash="1234.56" ... />
   if (balances.EUR === 0 && balances.USD === 0) {
     const cashReportRegex = /<CashReport\s+([^>]+)\/>/g
     const cashReportMatches = xml.matchAll(cashReportRegex)
