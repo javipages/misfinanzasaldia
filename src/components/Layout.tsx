@@ -10,6 +10,7 @@ import {
   updateUserTourCompleted,
 } from "@/integrations/supabase/preferences";
 import { usePrivacyEffect } from "@/store/privacyStore";
+import { SuggestionButton } from "./SuggestionButton";
 
 export function Layout() {
   const [showTour, setShowTour] = useState(false);
@@ -78,6 +79,7 @@ export function Layout() {
           onClose={handleCloseTour}
           autoStart={showTour}
         />
+        <SuggestionButton />
       </SidebarInset>
     </SidebarProvider>
   );
