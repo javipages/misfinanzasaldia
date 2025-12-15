@@ -28,4 +28,4 @@ dist-ssr
 .cursor
 generate-apple-secret.mjs
 
-supabase/migrations/CRON_QUICK_SETUP.sql
+CRON_QUICK_SETUP.sql
