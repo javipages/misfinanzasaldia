@@ -18,8 +18,9 @@ import {
   ArrowUp,
   ArrowDown,
   X,
+  Plus,
 } from "lucide-react";
-import { useHoldings, type Holding } from "@/hooks/use-holdings";
+import { useHoldings, type Holding, type HoldingInput } from "@/hooks/use-holdings";
 import { useExchangeRate } from "@/hooks/use-exchange-rate";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -78,6 +79,7 @@ const Investments = () => {
     isLoading,
     deleteHolding,
     updateHolding,
+    addHolding,
   } = useHoldings();
 
   // Sorting state
@@ -252,6 +254,42 @@ const Investments = () => {
     }
   };
 
+  // Create dialog state
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    asset_type: "other" as HoldingInput["asset_type"],
+    quantity: "1",
+    cost_basis: "",
+    current_price: "",
+    currency: "EUR",
+  });
+
+  const handleCreateSave = async () => {
+    try {
+      await addHolding.mutateAsync({
+        name: createForm.name,
+        source: "manual",
+        asset_type: createForm.asset_type,
+        quantity: parseFloat(createForm.quantity) || 1,
+        cost_basis: createForm.cost_basis ? parseFloat(createForm.cost_basis) : undefined,
+        current_price: createForm.current_price ? parseFloat(createForm.current_price) : undefined,
+        currency: createForm.currency,
+      });
+      setCreateDialogOpen(false);
+      setCreateForm({
+        name: "",
+        asset_type: "other",
+        quantity: "1",
+        cost_basis: "",
+        current_price: "",
+        currency: "EUR",
+      });
+    } catch (error) {
+      console.error("Error creating holding:", error);
+    }
+  };
+
   const getAssetTypeConfig = (type: string) => {
     const configs: Record<string, { label: string; color: string }> = {
       etf: { label: "ETF", color: "bg-blue-100 text-blue-800" },
@@ -368,6 +406,13 @@ const Investments = () => {
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:gap-4 w-full sm:w-auto">
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            className="w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Añadir Inversión
+          </Button>
           <Button
             variant="outline"
             onClick={() => setMyInvestorDialogOpen(true)}
@@ -863,6 +908,123 @@ const Investments = () => {
             </Button>
             <Button onClick={handleEditSave} disabled={updateHolding.isPending}>
               {updateHolding.isPending ? "Guardando..." : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Holding Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Añadir Inversión</DialogTitle>
+            <DialogDescription>
+              Añade una nueva inversión manual a tu portafolio
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="create_name" className="text-right">
+                Nombre
+              </Label>
+              <Input
+                id="create_name"
+                value={createForm.name}
+                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                className="col-span-3"
+                placeholder="Nombre del activo"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="create_type" className="text-right">
+                Tipo
+              </Label>
+              <Select
+                value={createForm.asset_type}
+                onValueChange={(v) => setCreateForm({ ...createForm, asset_type: v as HoldingInput["asset_type"] })}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Tipo de activo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="etf">ETF</SelectItem>
+                  <SelectItem value="stock">Acciones</SelectItem>
+                  <SelectItem value="fund">Fondos</SelectItem>
+                  <SelectItem value="crypto">Crypto</SelectItem>
+                  <SelectItem value="bond">Bonos</SelectItem>
+                  <SelectItem value="other">Otros</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="create_quantity" className="text-right">
+                Cantidad
+              </Label>
+              <Input
+                id="create_quantity"
+                type="number"
+                step="0.0001"
+                value={createForm.quantity}
+                onChange={(e) => setCreateForm({ ...createForm, quantity: e.target.value })}
+                className="col-span-3"
+                placeholder="Número de participaciones"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="create_cost" className="text-right">
+                Coste
+              </Label>
+              <Input
+                id="create_cost"
+                type="number"
+                step="0.01"
+                value={createForm.cost_basis}
+                onChange={(e) => setCreateForm({ ...createForm, cost_basis: e.target.value })}
+                className="col-span-3"
+                placeholder="Precio de compra por unidad"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="create_price" className="text-right">
+                Precio Actual
+              </Label>
+              <Input
+                id="create_price"
+                type="number"
+                step="0.01"
+                value={createForm.current_price}
+                onChange={(e) => setCreateForm({ ...createForm, current_price: e.target.value })}
+                className="col-span-3"
+                placeholder="Precio actual por unidad (opcional)"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="create_currency" className="text-right">
+                Moneda
+              </Label>
+              <Select
+                value={createForm.currency}
+                onValueChange={(v) => setCreateForm({ ...createForm, currency: v })}
+              >
+                <SelectTrigger className="col-span-3">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="EUR">EUR</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleCreateSave} 
+              disabled={addHolding.isPending || !createForm.name}
+            >
+              {addHolding.isPending ? "Guardando..." : "Crear"}
             </Button>
           </DialogFooter>
         </DialogContent>
