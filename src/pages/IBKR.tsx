@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useExchangeRate } from "@/hooks/use-exchange-rate";
 import { useIBKRHistory } from "@/hooks/use-ibkr-history";
 import { IBKRCharts } from "@/components/IBKRCharts";
+import { useHoldings } from "@/hooks/use-holdings";
 import {
   Select,
   SelectContent,
@@ -27,27 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface IBKRPosition {
-  id: string;
-  symbol: string;
-  description: string | null;
-  conid: string;
-  isin: string | null;
-  quantity: number;
-  current_price: number;
-  cost_basis: number;
-  position_value: number | null;
-  unrealized_pnl: number | null;
-  unrealized_pnl_percent: number | null;
-  asset_category: string | null;
-  currency: string | null;
-  exchange: string | null;
-  last_sync_at: string;
-}
-
 const IBKR = () => {
-  const [positions, setPositions] = useState<IBKRPosition[]>([]);
-  const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -58,6 +39,9 @@ const IBKR = () => {
     () =>
       (localStorage.getItem("ibkr_display_currency") as "USD" | "EUR") || "EUR"
   );
+
+  // Get IBKR positions from unified holdings
+  const { holdings: positions, isLoading: loading } = useHoldings({ source: "ibkr" });
 
   // Get exchange rate (USD to selected currency)
   const { rate: exchangeRate, loading: rateLoading } = useExchangeRate(
@@ -72,26 +56,8 @@ const IBKR = () => {
   const hasHistory = history.length > 0;
 
   useEffect(() => {
-    loadPositions();
     loadConfig();
   }, []);
-
-  const loadPositions = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("ibkr_positions")
-        .select("*")
-        .order("symbol", { ascending: true });
-
-      if (error) throw error;
-
-      setPositions(data || []);
-    } catch (error) {
-      console.error("Error loading positions:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadConfig = async () => {
     try {
@@ -122,8 +88,8 @@ const IBKR = () => {
           type: "success",
           text: `✅ Sincronizado: ${data.created} nuevas, ${data.updated} actualizadas`,
         });
-        await loadPositions();
         await loadConfig();
+        // positions will auto-refresh via react-query
       } else {
         throw new Error(data.error || "Error en sincronización");
       }
@@ -500,7 +466,7 @@ const IBKR = () => {
                           </div>
                         </td>
                         <td className="p-3">
-                          <div className="font-medium">{pos.description}</div>
+                          <div className="font-medium">{pos.name}</div>
                           {pos.isin && (
                             <div className="text-xs text-muted-foreground font-mono">
                               {pos.isin}
@@ -511,10 +477,10 @@ const IBKR = () => {
                           {formatNumber(pos.quantity, 4)}
                         </td>
                         <td className="p-3 text-right font-mono">
-                          {formatCurrency(pos.current_price)}
+                          {formatCurrency(pos.current_price ?? 0)}
                         </td>
                         <td className="p-3 text-right font-mono">
-                          {formatCurrency(pos.cost_basis)}
+                          {formatCurrency(pos.cost_basis ?? 0)}
                         </td>
                         <td className="p-3 text-right font-mono font-bold">
                           {formatCurrency(pos.position_value ?? 0)}
