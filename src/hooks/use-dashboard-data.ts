@@ -9,6 +9,7 @@ import {
 } from "@/integrations/supabase/categories";
 import { useAssets } from "@/hooks/use-assets";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { listAssetValuesMultiYear } from "@/integrations/supabase/categories";
 
 export interface MonthlyData {
   month: string;
@@ -103,6 +104,36 @@ export function useDashboardData(selectedMonth?: number) {
     },
   });
 
+  // Get historical patrimony data for better predictions
+  const currentYear = new Date().getFullYear();
+  const historicalDataQuery = useQuery({
+    queryKey: ["patrimony-history", 2020, currentYear],
+    queryFn: async () => {
+      const values = await listAssetValuesMultiYear(2020, currentYear);
+      // Group by year-month and sum all asset values
+      const monthlyTotals = new Map<string, { year: number; month: number; total: number }>();
+      for (const value of values) {
+        const key = `${value.year}-${value.month}`;
+        const existing = monthlyTotals.get(key);
+        if (existing) {
+          existing.total += value.amount;
+        } else {
+          monthlyTotals.set(key, {
+            year: value.year,
+            month: value.month,
+            total: value.amount,
+          });
+        }
+      }
+      return Array.from(monthlyTotals.values())
+        .filter((item) => item.total > 0)
+        .sort((a, b) => {
+          if (a.year !== b.year) return a.year - b.year;
+          return a.month - b.month;
+        });
+    },
+  });
+
   const dashboardData = useMemo(() => {
     if (
       currentYearQuery.isLoading ||
@@ -175,9 +206,11 @@ export function useDashboardData(selectedMonth?: number) {
       .map((x) => x.idx)
       .slice(-1)[0];
 
-    const lastHistory = monthlyTotals
-      .filter((m) => (m.patrimonio ?? 0) > 0)
-      .slice(-12);
+    // Use historical data from all years for better prediction
+    const historicalData = historicalDataQuery.data ?? [];
+    const lastHistory = historicalData.length >= 2
+      ? historicalData.slice(-24).map(h => ({ patrimonio: h.total })) // Last 24 months of history
+      : monthlyTotals.filter((m) => (m.patrimonio ?? 0) > 0).slice(-12);
 
     const predicted: MonthlyData[] = monthlyTotals.map((m, idx) => {
       // Only predict for future months within the same year and after last valid data point
@@ -306,6 +339,7 @@ export function useDashboardData(selectedMonth?: number) {
     incomeCategoriesQuery.isLoading,
     incomeCategoriesQuery.isFetching,
     isMobile,
+    historicalDataQuery.data,
   ]);
 
   return dashboardData;

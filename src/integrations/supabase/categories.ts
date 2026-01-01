@@ -1356,6 +1356,21 @@ export async function listAssetValues(year: number): Promise<AssetValueRow[]> {
   return (data as AssetValueRow[]) ?? [];
 }
 
+export async function listAssetValuesMultiYear(
+  startYear: number,
+  endYear: number
+): Promise<AssetValueRow[]> {
+  const { data, error } = await supabase
+    .from(TABLE_ASSET_VALUES)
+    .select("*")
+    .gte("year", startYear)
+    .lte("year", endYear)
+    .order("year", { ascending: true })
+    .order("month", { ascending: true });
+  if (error) throw error;
+  return (data as AssetValueRow[]) ?? [];
+}
+
 export async function createAssetValue(
   input: Omit<AssetValueRow, "id" | "user_id" | "created_at" | "updated_at">
 ): Promise<AssetValueRow> {
