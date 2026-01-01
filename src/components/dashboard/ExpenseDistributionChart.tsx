@@ -65,17 +65,16 @@ export const ExpenseDistributionChart = ({
               ))}
             </Pie>
             <Tooltip
-              formatter={(value) => `Gasto: ${Number(value).toLocaleString()}€`}
-              contentStyle={{
-                backgroundColor: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "8px",
-                boxShadow:
-                  "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
-                color: "hsl(var(--foreground))",
-                fontSize: "14px",
-                padding: "8px 12px",
-                zIndex: 1000,
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  return (
+                    <div className="bg-popover text-popover-foreground border border-border rounded-lg shadow-lg px-3 py-2 text-sm">
+                      <p className="font-medium">{payload[0].name}</p>
+                      <p>Gasto: {Number(payload[0].value).toLocaleString()}€</p>
+                    </div>
+                  );
+                }
+                return null;
               }}
             />
           </PieChart>
