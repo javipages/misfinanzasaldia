@@ -20,8 +20,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      // Solo actualizar si el usuario cambió (evita re-renders al cambiar de ventana)
+      setSession((prev) => {
+        if (prev?.user?.id === newSession?.user?.id) {
+          return prev; // Mantener la misma referencia si el usuario no cambió
+        }
+        return newSession;
+      });
       setLoading(false);
     });
 
