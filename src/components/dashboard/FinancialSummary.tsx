@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { MonthlyData } from "@/hooks/use-dashboard-data";
+import { formatCurrency } from "@/utils/format";
 
 interface FinancialSummaryProps {
   monthlyData: MonthlyData[];
@@ -69,7 +70,7 @@ export const FinancialSummary = ({
               Promedio mensual
             </span>
             <span className="font-medium">
-              {(totalIngresos / (selectedMonth ? 1 : 12)).toLocaleString()}€
+              {formatCurrency(totalIngresos / (selectedMonth ? 1 : 12))}
             </span>
           </div>
         </div>

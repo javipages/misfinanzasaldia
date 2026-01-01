@@ -21,6 +21,7 @@ import { ExpenseDistributionChart } from "@/components/dashboard/ExpenseDistribu
 import { IncomeFlowSankey } from "@/components/dashboard/IncomeFlowSankey";
 import { PatrimonyEvolutionChart } from "@/components/dashboard/PatrimonyEvolutionChart";
 import { FinancialSummary } from "@/components/dashboard/FinancialSummary";
+import { formatCurrency } from "@/utils/format";
 
 const Dashboard = () => {
   const [selectedMonth, setSelectedMonth] = useState<number | undefined>(
@@ -181,22 +182,22 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-6">
         <MetricCard
           title="Total Ingresos"
-          value={`${metrics.totalIngresos.toLocaleString()}€`}
+          value={formatCurrency(metrics.totalIngresos)}
           icon={TrendingUp}
         />
         <MetricCard
           title="Total Gastos"
-          value={`${metrics.totalGastos.toLocaleString()}€`}
+          value={formatCurrency(metrics.totalGastos)}
           icon={TrendingDown}
         />
         <MetricCard
           title="Ahorro Neto"
-          value={`${metrics.totalAhorro.toLocaleString()}€`}
+          value={formatCurrency(metrics.totalAhorro)}
           icon={Target}
         />
         <MetricCard
           title="Patrimonio Total"
-          value={`${metrics.currentPatrimony.toLocaleString()}€`}
+          value={formatCurrency(metrics.currentPatrimony)}
           icon={Wallet}
         />
       </div>

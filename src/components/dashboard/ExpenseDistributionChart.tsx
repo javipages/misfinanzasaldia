@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { formatCurrency } from "@/utils/format";
 
 interface ExpenseCategory {
   name: string;
@@ -70,7 +71,7 @@ export const ExpenseDistributionChart = ({
                   return (
                     <div className="bg-popover text-popover-foreground border border-border rounded-lg shadow-lg px-3 py-2 text-sm">
                       <p className="font-medium">{payload[0].name}</p>
-                      <p>Gasto: {Number(payload[0].value).toLocaleString()}€</p>
+                      <p>Gasto: {formatCurrency(Number(payload[0].value))}</p>
                     </div>
                   );
                 }
@@ -96,7 +97,7 @@ export const ExpenseDistributionChart = ({
                   </span>
                 </div>
                 <span className="text-sm font-medium">
-                  {category.value.toLocaleString()}€
+                  {formatCurrency(category.value)}
                 </span>
               </div>
             )

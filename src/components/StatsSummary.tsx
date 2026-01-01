@@ -1,5 +1,6 @@
 import { TrendingUp, PiggyBank, Trophy } from "lucide-react";
 import { MetricCard } from "@/components/MetricCard";
+import { formatCurrency } from "@/utils/format";
 
 export interface StatsState {
   yearTotal: number;
@@ -22,8 +23,6 @@ export function StatsSummary({ stats, variant }: StatsSummaryProps) {
   const avgVariant = (isIncome ? "info" : "warning") as "info" | "warning";
   const bestVariant = (isIncome ? "primary" : "info") as "primary" | "info";
 
-  const formatCurrency = (value: number) => `€${value.toLocaleString()}`;
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       <MetricCard
@@ -34,7 +33,7 @@ export function StatsSummary({ stats, variant }: StatsSummaryProps) {
       />
       <MetricCard
         title="Promedio mensual"
-        value={`€${stats.monthlyAverage.toFixed(0)}`}
+        value={formatCurrency(stats.monthlyAverage)}
         icon={PiggyBank}
         variant={avgVariant}
       />

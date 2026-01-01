@@ -37,13 +37,11 @@ import {
   TableSkeleton,
 } from "@/components/PageSkeletons";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatCurrency } from "@/utils/format";
 
 const Goals = () => {
   const { goals, loading, error, createGoal, updateGoal, deleteGoal } =
     useGoals();
-  function formatEuro(value: number) {
-    return `${value.toLocaleString()} €`;
-  }
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [formData, setFormData] = useState({
@@ -248,7 +246,7 @@ const Goals = () => {
     ) {
       return `${value.toFixed(0)}%`;
     }
-    return formatEuro(Math.round(value));
+    return formatCurrency(Math.round(value));
   };
 
   const generateGoalName = (
@@ -269,7 +267,7 @@ const Goals = () => {
       if (category === "savings_ratio" || targetType === "percentage") {
         return `${base} ${targetAmount}%`;
       }
-      return `${base} €${Math.round(targetAmount).toLocaleString()}`;
+      return `${base} ${formatCurrency(Math.round(targetAmount))}`;
     }
     return base;
   };
@@ -512,7 +510,7 @@ const Goals = () => {
                         {goal.category === "savings_ratio" ||
                         goal.target_type === "percentage"
                           ? `${goal.target_amount.toLocaleString()}%`
-                          : `${goal.target_amount.toLocaleString()} €`}
+                          : formatCurrency(goal.target_amount)}
                       </span>
                     </div>
                   </div>
@@ -729,7 +727,7 @@ const Goals = () => {
                             </span>
                           ) : (
                             <span className="font-medium text-warning">
-                              {formatEuro(
+                              {formatCurrency(
                                 Math.max(0, Math.round(monthlyNeeded))
                               )}
                               /mes

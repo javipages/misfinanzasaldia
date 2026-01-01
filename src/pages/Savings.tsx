@@ -8,6 +8,7 @@ import { useUserStore } from "@/store/user";
 import { useGoals } from "@/hooks/use-goals";
 import { useNavigate } from "react-router-dom";
 import { MONTHS } from "@/utils/constants";
+import { formatCurrency } from "@/utils/format";
 
 const Savings = () => {
   const year = useUserStore((s) => s.year);
@@ -50,9 +51,6 @@ const Savings = () => {
     ? (calculateTotal / savingsGoal) * 100
     : 0;
 
-  function formatEuro(value: number) {
-    return `${value.toLocaleString()} €`;
-  }
 
   return (
     <div className="space-y-6">
@@ -98,10 +96,10 @@ const Savings = () => {
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                 <span className="text-muted-foreground">
-                  €{calculateTotal.toLocaleString()} ahorrado
+                  {formatCurrency(calculateTotal)} ahorrado
                 </span>
                 <span className="text-muted-foreground">
-                  €{savingsGoal.toLocaleString()} objetivo
+                  {formatCurrency(savingsGoal)} objetivo
                 </span>
               </div>
             </div>
@@ -160,12 +158,12 @@ const Savings = () => {
                   {savingsData.map((value, monthIndex) => (
                     <td key={monthIndex} className="p-1 text-center">
                       <div className="p-3 rounded text-success font-medium">
-                        {formatEuro(value)}
+                        {formatCurrency(value)}
                       </div>
                     </td>
                   ))}
                   <td className="p-3 text-center font-bold text-success text-lg">
-                    {formatEuro(calculateTotal)}
+                    {formatCurrency(calculateTotal)}
                   </td>
                 </tr>
               </tbody>
@@ -181,7 +179,7 @@ const Savings = () => {
             <PiggyBank className="h-8 w-8 text-success" />
             <div>
               <div className="text-2xl font-bold text-success">
-                €{calculateTotal.toLocaleString()}
+                {formatCurrency(calculateTotal)}
               </div>
               <div className="text-sm text-muted-foreground">
                 Total ahorrado
@@ -194,7 +192,7 @@ const Savings = () => {
             <TrendingUp className="h-8 w-8 text-info" />
             <div>
               <div className="text-2xl font-bold text-info">
-                €{Math.round(calculateAverage).toLocaleString()}
+                {formatCurrency(Math.round(calculateAverage))}
               </div>
               <div className="text-sm text-muted-foreground">
                 Promedio mensual
@@ -207,7 +205,7 @@ const Savings = () => {
             <Target className="h-8 w-8 text-primary" />
             <div>
               <div className="text-2xl font-bold text-primary">
-                €{getBestMonth.value.toLocaleString()}
+                {formatCurrency(getBestMonth.value)}
               </div>
               <div className="text-sm text-muted-foreground">
                 Mejor mes ({getBestMonth.month})
@@ -270,7 +268,7 @@ const Savings = () => {
                       {MONTHS[index]}
                     </span>
                     <span className="font-medium text-success">
-                      €{value.toLocaleString()}
+                      {formatCurrency(value)}
                     </span>
                   </div>
                 ))}
@@ -286,7 +284,7 @@ const Savings = () => {
                     Ahorro actual
                   </span>
                   <span className="font-medium">
-                    {formatEuro(calculateTotal)}
+                    {formatCurrency(calculateTotal)}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -294,7 +292,7 @@ const Savings = () => {
                     Proyección anual
                   </span>
                   <span className="font-medium text-info">
-                    {formatEuro(
+                    {formatCurrency(
                       Number((Math.max(0, calculateAverage) * 12).toFixed(0))
                     )}
                   </span>
@@ -305,7 +303,7 @@ const Savings = () => {
                       Falta para objetivo
                     </span>
                     <span className="font-medium text-warning">
-                      {formatEuro(savingsGoal - calculateTotal)}
+                      {formatCurrency(savingsGoal - calculateTotal)}
                     </span>
                   </div>
                 )}

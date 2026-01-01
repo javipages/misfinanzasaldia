@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/chart";
 import type { MonthlyData } from "@/hooks/use-dashboard-data";
 import { ChartConfig } from "../ui/chart";
+import { formatCurrency } from "@/utils/format";
 
 interface MonthlyOverviewChartProps {
   data: MonthlyData[];
@@ -75,7 +76,7 @@ export const MonthlyOverviewChart = ({
                         : name === "ahorro"
                         ? "Ahorro"
                         : name;
-                    return `${label}: ${Number(value).toLocaleString()}€`;
+                    return `${label}: ${formatCurrency(Number(value))}`;
                   }}
                 />
               }

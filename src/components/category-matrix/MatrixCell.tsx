@@ -1,4 +1,5 @@
 import { getHeatmapColor, calculateVariation } from "./aggregation";
+import { formatCurrency } from "@/utils/format";
 
 type Props = {
   value: number;
@@ -40,7 +41,7 @@ export function MatrixCell({
         disabled={!onClick}
       >
         <div className="flex flex-col items-center gap-0.5">
-          <span>{Number(value).toLocaleString()} €</span>
+          <span>{formatCurrency(value)}</span>
           {variation && (
             <span
               className={`text-xs ${

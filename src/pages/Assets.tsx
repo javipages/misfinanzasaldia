@@ -20,6 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { MONTHS } from "@/utils/constants";
+import { formatCurrency } from "@/utils/format";
 
 const Assets = () => {
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -163,9 +164,6 @@ const Assets = () => {
       .filter((cat) => cat.type === type)
       .reduce((sum, cat) => sum + (cat.data[lastMonthIndex] ?? 0), 0);
 
-  function formatEuro(value: number) {
-    return `${value.toLocaleString()} €`;
-  }
 
   const handleCellEdit = async (
     categoryId: string,
@@ -283,7 +281,7 @@ const Assets = () => {
                                       onClick={() => setEditingCell(cellKey)}
                                       aria-label={`Editar ${category.name} en ${monthName}`}
                                     >
-                                      {formatEuro(value)}
+                                      {formatCurrency(value)}
                                     </button>
                                   )}
                                 </div>
@@ -313,7 +311,7 @@ const Assets = () => {
                         {MONTHS[monthIndex]}
                       </div>
                       <div className="text-sm font-bold text-primary">
-                        {formatEuro(calculateColumnTotal(monthIndex))}
+                        {formatCurrency(calculateColumnTotal(monthIndex))}
                       </div>
                     </div>
                   ))}
@@ -416,7 +414,7 @@ const Assets = () => {
                                   onClick={() => setEditingCell(cellKey)}
                                   aria-label={`Editar ${category.name} en ${MONTHS[monthIndex]}`}
                                 >
-                                  {formatEuro(value)}
+                                  {formatCurrency(value)}
                                 </button>
                               )}
                             </td>
@@ -435,7 +433,7 @@ const Assets = () => {
                         key={monthIndex}
                         className="p-3 text-center font-bold text-primary"
                       >
-                        {formatEuro(calculateColumnTotal(monthIndex))}
+                        {formatCurrency(calculateColumnTotal(monthIndex))}
                       </td>
                     ))}
                     {/* No global total cell */}
@@ -451,7 +449,7 @@ const Assets = () => {
         <Card className="shadow-card">
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-info">
-              {formatEuro(totalByTypeLastMonth("cuenta_bancaria"))}
+              {formatCurrency(totalByTypeLastMonth("cuenta_bancaria"))}
             </div>
             <div className="text-sm text-muted-foreground">
               Cuentas bancarias
@@ -461,7 +459,7 @@ const Assets = () => {
         <Card className="shadow-card">
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-success">
-              {formatEuro(totalByTypeLastMonth("inversion"))}
+              {formatCurrency(totalByTypeLastMonth("inversion"))}
             </div>
             <div className="text-sm text-muted-foreground">Inversiones</div>
           </CardContent>
@@ -469,7 +467,7 @@ const Assets = () => {
         <Card className="shadow-card">
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-muted-foreground">
-              {formatEuro(totalByTypeLastMonth("efectivo"))}
+              {formatCurrency(totalByTypeLastMonth("efectivo"))}
             </div>
             <div className="text-sm text-muted-foreground">Efectivo</div>
           </CardContent>
@@ -477,7 +475,7 @@ const Assets = () => {
         <Card className="shadow-card">
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-primary">
-              {formatEuro(
+              {formatCurrency(
                 assetCategories.reduce(
                   (sum, cat) => sum + (cat.data[lastMonthIndex] ?? 0),
                   0

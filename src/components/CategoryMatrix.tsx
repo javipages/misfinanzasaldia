@@ -37,6 +37,7 @@ import {
 import { useUserStore } from "@/store/user";
 import { useCategoryMatrix } from "@/hooks/use-category-matrix";
 import { MONTHS } from "@/utils/constants";
+import { formatCurrency } from "@/utils/format";
 
 export type CategoryMatrixRef = {
   openAddDialog: (
@@ -404,10 +405,9 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                                     : "bg-background"
                                 }`}
                               >
-                                {calculateRowTotal(
-                                  row.aggregatedTotals
-                                ).toLocaleString()}{" "}
-                                €
+                                {formatCurrency(
+                                  calculateRowTotal(row.aggregatedTotals)
+                                )}
                               </td>
                             </SortableRow>
 
@@ -481,10 +481,9 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                                       )
                                     )}
                                     <td className="p-3 text-center font-medium text-muted-foreground sticky right-0 bg-background group-hover/row:bg-muted z-[5]">
-                                      {calculateRowTotal(
-                                        sub.aggregatedTotals
-                                      ).toLocaleString()}{" "}
-                                      €
+                                      {formatCurrency(
+                                        calculateRowTotal(sub.aggregatedTotals)
+                                      )}
                                     </td>
                                   </SortableRow>
                                 ))}
@@ -528,14 +527,13 @@ export const CategoryMatrix = forwardRef<CategoryMatrixRef, Props>(
                             );
                           })}
                           <td className="p-3 text-center font-extrabold sticky right-0 bg-background z-[5]">
-                            {filteredMatrix
-                              .reduce(
+                            {formatCurrency(
+                              filteredMatrix.reduce(
                                 (sum, row) =>
                                   sum + calculateRowTotal(row.aggregatedTotals),
                                 0
                               )
-                              .toLocaleString()}{" "}
-                            €
+                            )}
                           </td>
                         </tr>
                       </tbody>

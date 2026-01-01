@@ -8,6 +8,7 @@ import {
   TooltipProps,
 } from "recharts";
 import type { MonthlyData } from "@/hooks/use-dashboard-data";
+import { formatCurrency } from "@/utils/format";
 
 type SankeyNodeDatum = {
   name: string;
@@ -81,23 +82,20 @@ interface IncomeFlowSankeyProps {
   isLoading: boolean;
 }
 
-const formatCurrency = (value: number) => {
+// Local compact format for Sankey nodes if needed, keep for now or replace if specialized
+const formatCompactCurrency = (value: number) => {
   if (!Number.isFinite(value)) {
-    return "0€";
+    return "0 €";
   }
 
   const abs = Math.abs(value);
   if (abs >= 1000) {
     const compact = value / 1000;
     const digits = abs >= 10000 ? 1 : 2;
-    return `${compact.toFixed(digits)}K€`;
+    return `${compact.toFixed(digits)}K €`;
   }
 
-  const num = value.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  });
-  return `${num}€`;
+  return formatCurrency(value);
 };
 
 const formatPercentage = (value?: number) => {
@@ -200,7 +198,7 @@ const SankeyCustomNode = ({
         fontWeight={500}
         fill="hsl(var(--foreground))"
       >
-        {formatCurrency(payload.amount)}
+        {formatCompactCurrency(payload.amount)}
         {percentageText ? (
           <tspan fill="hsl(var(--muted-foreground))">{` (${percentageText})`}</tspan>
         ) : null}

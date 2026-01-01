@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatCurrency as formatCurrencyUtil } from "@/utils/format";
 
 const IBKR = () => {
   const [syncing, setSyncing] = useState(false);
@@ -115,9 +116,13 @@ const IBKR = () => {
       ? amount * exchangeRate  // USD to EUR
       : amount;
 
-    return new Intl.NumberFormat("es-ES", {
+    if (displayCurrency === "EUR") {
+      return formatCurrencyUtil(convertedAmount);
+    }
+
+    return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: displayCurrency,
+      currency: "USD",
       minimumFractionDigits: 2,
     }).format(convertedAmount);
   };
@@ -406,7 +411,7 @@ const IBKR = () => {
                     </div>
                     {(cashEUR > 0 || cashUSD > 0) && (
                       <div className="text-xs text-muted-foreground mt-1">
-                        {cashEUR > 0 && `€${formatNumber(cashEUR, 2)}`}
+                        {cashEUR > 0 && formatCurrencyUtil(cashEUR)}
                         {cashEUR > 0 && cashUSD > 0 && " + "}
                         {cashUSD > 0 && `$${formatNumber(cashUSD, 2)}`}
                       </div>

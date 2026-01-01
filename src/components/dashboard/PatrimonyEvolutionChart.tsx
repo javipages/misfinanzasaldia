@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/chart";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
 import type { MonthlyData } from "@/hooks/use-dashboard-data";
+import { formatCurrency } from "@/utils/format";
 
 interface PatrimonyEvolutionChartProps {
   data: MonthlyData[];
@@ -61,7 +62,7 @@ export const PatrimonyEvolutionChart = ({
               content={
                 <ChartTooltipContent
                   formatter={(value) =>
-                    `Patrimonio: ${Number(value).toLocaleString()}€`
+                    `Patrimonio: ${formatCurrency(Number(value))}`
                   }
                 />
               }
