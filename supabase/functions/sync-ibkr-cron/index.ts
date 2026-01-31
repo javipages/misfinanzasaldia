@@ -82,17 +82,42 @@ serve(async (req) => {
             last_price_update: new Date().toISOString(),
           }
 
-          // Upsert holding
-          await supabase
+          // Check if exists in holdings
+          const { data: existing } = await supabase
             .from('holdings')
-            .upsert(holdingData, {
-              onConflict: 'user_id,source,external_id',
-            })
+            .select('id')
+            .eq('user_id', config.user_id)
+            .eq('source', 'ibkr')
+            .eq('external_id', pos.conid)
+            .maybeSingle()
+
+          if (existing) {
+            // Update
+            const { error: updateError } = await supabase
+              .from('holdings')
+              .update(holdingData)
+              .eq('id', existing.id)
+            
+            if (updateError) {
+              console.error(`❌ Error updating holding ${pos.symbol}:`, updateError)
+              throw updateError
+            }
+          } else {
+            // Create
+            const { error: insertError } = await supabase
+              .from('holdings')
+              .insert(holdingData)
+            
+            if (insertError) {
+              console.error(`❌ Error creating holding ${pos.symbol}:`, insertError)
+              throw insertError
+            }
+          }
         }
 
         // Update cash balances
         if (cashBalances.EUR > 0) {
-          await supabase
+          const { error: cashError } = await supabase
             .from('cash_balances')
             .upsert({
               user_id: config.user_id,
@@ -101,10 +126,14 @@ serve(async (req) => {
               amount: cashBalances.EUR,
               last_sync_at: new Date().toISOString(),
             }, { onConflict: 'user_id,source,currency' })
+          
+          if (cashError) {
+            throw cashError
+          }
         }
 
         if (cashBalances.USD > 0) {
-          await supabase
+          const { error: cashError } = await supabase
             .from('cash_balances')
             .upsert({
               user_id: config.user_id,
@@ -113,6 +142,10 @@ serve(async (req) => {
               amount: cashBalances.USD,
               last_sync_at: new Date().toISOString(),
             }, { onConflict: 'user_id,source,currency' })
+          
+          if (cashError) {
+            throw cashError
+          }
         }
 
         // Update last sync time

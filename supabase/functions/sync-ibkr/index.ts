@@ -109,23 +109,33 @@ serve(async (req) => {
 
       if (existing) {
         // Update
-        await supabase
+        const { error: updateError } = await supabase
           .from('holdings')
           .update(holdingData)
           .eq('id', existing.id)
+        
+        if (updateError) {
+          console.error(`❌ Error updating holding ${pos.symbol}:`, updateError)
+          throw updateError
+        }
         updated++
       } else {
         // Create
-        await supabase
+        const { error: insertError } = await supabase
           .from('holdings')
           .insert(holdingData)
+        
+        if (insertError) {
+          console.error(`❌ Error creating holding ${pos.symbol}:`, insertError)
+          throw insertError
+        }
         created++
       }
     }
 
     // Update cash balances
     if (cashBalances.EUR > 0) {
-      await supabase
+      const { error: cashError } = await supabase
         .from('cash_balances')
         .upsert({
           user_id: user.id,
@@ -134,10 +144,15 @@ serve(async (req) => {
           amount: cashBalances.EUR,
           last_sync_at: new Date().toISOString(),
         }, { onConflict: 'user_id,source,currency' })
+      
+      if (cashError) {
+        console.error('❌ Error updating EUR cash:', cashError)
+        throw cashError
+      }
     }
 
     if (cashBalances.USD > 0) {
-      await supabase
+      const { error: cashError } = await supabase
         .from('cash_balances')
         .upsert({
           user_id: user.id,
@@ -146,6 +161,11 @@ serve(async (req) => {
           amount: cashBalances.USD,
           last_sync_at: new Date().toISOString(),
         }, { onConflict: 'user_id,source,currency' })
+
+      if (cashError) {
+        console.error('❌ Error updating USD cash:', cashError)
+        throw cashError
+      }
     }
 
     // Calculate totals for history
