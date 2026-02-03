@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,6 +28,87 @@ type EditableAssetCategory = {
   display_order: number;
   type: AssetType;
 };
+
+// Componente para manejar la fila individual y el estado local del input
+function AssetRow({
+  asset,
+  onRename,
+  onChangeType,
+  onDelete,
+}: {
+  asset: EditableAssetCategory;
+  onRename: (id: string, name: string) => Promise<unknown>;
+  onChangeType: (id: string, type: AssetType) => Promise<unknown>;
+  onDelete: (id: string) => void;
+}) {
+  const [localName, setLocalName] = useState(asset.name);
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Sincronizar si el prop cambia externamente (ej: revalida query)
+  // pero NO si es un cambio nuestro optimista que podría causar conflictos de foco
+  // En este caso simple, sincronizamos solo si el ID cambia o si realmente queremos forzar update.
+  // Pero para inputs controlados localmente que salvan en onBlur, lo ideal es inicializar.
+  // Si queremos reaccionar a cambios externos, useEffect:
+  useEffect(() => {
+    if (!isFocused) {
+      setLocalName(asset.name);
+    }
+  }, [asset.name, isFocused]);
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    if (localName !== asset.name && localName.trim() !== "") {
+      void onRename(asset.id, localName);
+    } else if (localName.trim() === "") {
+      // Revertir si está vacío
+      setLocalName(asset.name);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.currentTarget.blur(); // Trigger blur to save
+    }
+  };
+
+  return (
+    <tr>
+      <td className="py-2 pr-2">
+        <Input
+          value={localName}
+          onChange={(e) => setLocalName(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+        />
+      </td>
+      <td className="py-2 pr-2">
+        <Select
+          value={asset.type}
+          onValueChange={(v) => void onChangeType(asset.id, v as AssetType)}
+        >
+          <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectValue placeholder="Tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="cuenta_bancaria">Cuenta</SelectItem>
+            <SelectItem value="inversion">Inversión</SelectItem>
+            <SelectItem value="efectivo">Efectivo</SelectItem>
+            <SelectItem value="cripto">Crypto</SelectItem>
+            <SelectItem value="otro">Otro</SelectItem>
+          </SelectContent>
+        </Select>
+      </td>
+      <td className="py-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="destructive" onClick={() => onDelete(asset.id)}>
+            Eliminar
+          </Button>
+        </div>
+      </td>
+    </tr>
+  );
+}
 
 export default function SettingsAssets() {
   const {
@@ -151,60 +232,22 @@ export default function SettingsAssets() {
               </thead>
               <tbody className="divide-y">
                 {sortedAssets.map((cat) => (
-                  <tr key={cat.id}>
-                    <td className="py-2 pr-2">
-                      <Input
-                        value={cat.name}
-                        onChange={(e) =>
-                          void renameAsset.mutateAsync({
-                            id: cat.id,
-                            name: e.target.value,
-                          })
-                        }
-                      />
-                    </td>
-                    <td className="py-2 pr-2">
-                      <Select
-                        value={cat.type}
-                        onValueChange={(v) =>
-                          void changeAssetType.mutateAsync({
-                            id: cat.id,
-                            type: v as AssetType,
-                          })
-                        }
-                      >
-                        <SelectTrigger className="w-full sm:w-[200px]">
-                          <SelectValue placeholder="Tipo" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cuenta_bancaria">
-                            Cuenta
-                          </SelectItem>
-                          <SelectItem value="inversion">Inversión</SelectItem>
-                          <SelectItem value="efectivo">Efectivo</SelectItem>
-                          <SelectItem value="cripto">Crypto</SelectItem>
-                          <SelectItem value="otro">Otro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="py-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Button
-                          variant="destructive"
-                          onClick={() =>
-                            setConfirm({
-                              open: true,
-                              categoryId: cat.id,
-                              subcategoryId: null,
-                              scope: "asset",
-                            })
-                          }
-                        >
-                          Eliminar
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
+                  <AssetRow
+                    key={cat.id}
+                    asset={cat}
+                    onRename={(id, name) => renameAsset.mutateAsync({ id, name })}
+                    onChangeType={(id, type) =>
+                      changeAssetType.mutateAsync({ id, type })
+                    }
+                    onDelete={(id) =>
+                      setConfirm({
+                        open: true,
+                        categoryId: id,
+                        subcategoryId: null,
+                        scope: "asset",
+                      })
+                    }
+                  />
                 ))}
               </tbody>
             </table>
