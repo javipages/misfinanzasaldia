@@ -59,6 +59,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AllocationChart } from "@/components/investments/AllocationChart";
+import { WealthEvolutionChart } from "@/components/investments/WealthEvolutionChart";
 
 const Investments = () => {
   const [myInvestorDialogOpen, setMyInvestorDialogOpen] = useState(false);
@@ -432,6 +434,8 @@ const Investments = () => {
         </div>
       </div>
 
+
+
       {/* Summary Cards */}
       <div className={`grid grid-cols-1 gap-4 ${hasIbkrConfig ? "md:grid-cols-5" : "md:grid-cols-4"}`}>
         <Card className="shadow-card">
@@ -536,7 +540,19 @@ const Investments = () => {
           </Card>
         )}
       </div>
-
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="h-[400px]">
+          <AllocationChart 
+            holdings={holdings} 
+            displayCurrency={displayCurrency} 
+            exchangeRate={exchangeRate}
+          />
+        </div>
+        <div className="h-[400px]">
+          <WealthEvolutionChart />
+        </div>
+      </div>
       {/* Holdings Table */}
       <Card className="shadow-card">
         <CardHeader className="pb-4">
